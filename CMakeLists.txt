@@ -83,14 +83,7 @@ function(disable_target_warnings NAME)
 endfunction()
 
 set(CMAKE_MODULE_PATH "${SEU_BUILD_SUPPORT_DIR}/cmake;${CMAKE_MODULE_PATH}")
-find_package(GUROBI)
+find_package(jsoncpp)
 
-include_directories(${GUROBI_INCLUDE_DIRS})
-
-
-# add_subdirectory(third_party)
+add_subdirectory(third_party)
 add_subdirectory(src)
-# add_subdirectory(test)
-
-
-# Add executable

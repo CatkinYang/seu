@@ -1,0 +1,8 @@
+[
+{
+  "directory": "/Users/catkin/workspace/seu/build/src",
+  "command": "/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/c++  -I/Users/catkin/workspace/seu/src -I/Users/catkin/workspace/seu/src/include -I/Users/catkin/workspace/seu/test/include -I/Users/catkin/workspace/seu/third_party -g -Wall -Wextra -Werror  -Wno-unused-parameter -Wno-attributes -O0 -ggdb -fsanitize=address -fno-omit-frame-pointer -fno-optimize-sibling-calls -std=gnu++17 -arch arm64 -isysroot /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX15.2.sdk -fPIC -o CMakeFiles/seu.dir/task.cc.o -c /Users/catkin/workspace/seu/src/task.cc",
+  "file": "/Users/catkin/workspace/seu/src/task.cc",
+  "output": "src/CMakeFiles/seu.dir/task.cc.o"
+}
+]

@@ -1,0 +1,100 @@
+{
+  "SPDXID": "SPDXRef-DOCUMENT",
+  "spdxVersion": "SPDX-2.3",
+  "name": "SBOM-SPDX-jsoncpp-1.9.6",
+  "creationInfo": {
+    "created": "2024-11-03T11:45:15Z",
+    "creators": [
+      "Tool: https://github.com/Homebrew/brew@4.4.1"
+    ]
+  },
+  "dataLicense": "CC0-1.0",
+  "documentNamespace": "https://formulae.brew.sh/spdx/jsoncpp-1.9.6.json",
+  "documentDescribes": [
+    "SPDXRef-Archive-jsoncpp-src",
+    "SPDXRef-Compiler",
+    "SPDXRef-Bottle-jsoncpp"
+  ],
+  "files": [
+
+  ],
+  "packages": [
+    {
+      "SPDXID": "SPDXRef-Archive-jsoncpp-src",
+      "name": "jsoncpp",
+      "versionInfo": "1.9.6",
+      "filesAnalyzed": false,
+      "licenseDeclared": "NOASSERTION",
+      "builtDate": "1970-01-01 00:00:00 UTC",
+      "licenseConcluded": "MIT",
+      "downloadLocation": "https://github.com/open-source-parsers/jsoncpp/archive/refs/tags/1.9.6.tar.gz",
+      "copyrightText": "NOASSERTION",
+      "externalRefs": [
+
+      ],
+      "checksums": [
+        {
+          "algorithm": "SHA256",
+          "checksumValue": "f93b6dd7ce796b13d02c108bc9f79812245a82e577581c4c9aabe57075c90ea2"
+        }
+      ]
+    },
+    {
+      "SPDXID": "SPDXRef-Compiler",
+      "name": "clang",
+      "versionInfo": "16.0",
+      "filesAnalyzed": false,
+      "licenseDeclared": "NOASSERTION",
+      "licenseConcluded": "NOASSERTION",
+      "copyrightText": "NOASSERTION",
+      "downloadLocation": "NOASSERTION",
+      "checksums": [
+
+      ],
+      "externalRefs": [
+
+      ]
+    },
+    {
+      "SPDXID": "SPDXRef-Bottle-jsoncpp",
+      "name": "jsoncpp",
+      "versionInfo": "1.9.6",
+      "filesAnalyzed": false,
+      "licenseDeclared": "NOASSERTION",
+      "builtDate": "1970-01-01 00:00:00 UTC",
+      "licenseConcluded": "MIT",
+      "downloadLocation": "https://mirrors.ustc.edu.cn/homebrew-bottles/bottles/jsoncpp-1.9.6.arm64_sonoma.bottle.tar.gz",
+      "copyrightText": "NOASSERTION",
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceLocator": "pkg:brew/homebrew/core/jsoncpp@1.9.6",
+          "referenceType": "purl"
+        }
+      ],
+      "checksums": [
+        {
+          "algorithm": "SHA256",
+          "checksumValue": "a6436e046cdede285aee56208380f24d37ef592671901d7cea131f00998a5000"
+        }
+      ]
+    }
+  ],
+  "relationships": [
+    {
+      "spdxElementId": "SPDXRef-Patch-jsoncpp-0",
+      "relationshipType": "PATCH_APPLIED",
+      "relatedSpdxElement": "SPDXRef-Archive-jsoncpp-src"
+    },
+    {
+      "spdxElementId": "SPDXRef-File-jsoncpp",
+      "relationshipType": "PACKAGE_OF",
+      "relatedSpdxElement": "SPDXRef-Archive-jsoncpp-src"
+    },
+    {
+      "spdxElementId": "SPDXRef-Compiler",
+      "relationshipType": "BUILD_TOOL_OF",
+      "relatedSpdxElement": "SPDXRef-Package-jsoncpp-src"
+    }
+  ]
+}

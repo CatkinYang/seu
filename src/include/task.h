@@ -1,6 +1,10 @@
 #pragma once
 
+#include <memory>
 #include <vector>
+
+using std::shared_ptr;
+using std::vector;
 
 namespace seu {
 
@@ -17,8 +21,8 @@ enum class TaskStatus { WAITING, CONFIGURING, RUNNING, ENDING };
 // 任务类
 class Task {
   public:
-    Task(int id, int clb, int dsp, int bram);
     Task(int id, int clb, int dsp, int bram, int exec);
+    Task(int clb, int dsp, int bram, int exec);
 
     auto getId() { return m_id; }
     auto getClb() { return m_clb; }
