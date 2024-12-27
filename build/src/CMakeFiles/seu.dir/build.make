@@ -83,17 +83,51 @@ src/CMakeFiles/seu.dir/task.cc.s: cmake_force
 	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green "Compiling CXX source to assembly CMakeFiles/seu.dir/task.cc.s"
 	cd /Users/catkin/workspace/seu/build/src && /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -S /Users/catkin/workspace/seu/src/task.cc -o CMakeFiles/seu.dir/task.cc.s
 
+src/CMakeFiles/seu.dir/task_manager.cc.o: src/CMakeFiles/seu.dir/flags.make
+src/CMakeFiles/seu.dir/task_manager.cc.o: /Users/catkin/workspace/seu/src/task_manager.cc
+src/CMakeFiles/seu.dir/task_manager.cc.o: src/CMakeFiles/seu.dir/compiler_depend.ts
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/Users/catkin/workspace/seu/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_2) "Building CXX object src/CMakeFiles/seu.dir/task_manager.cc.o"
+	cd /Users/catkin/workspace/seu/build/src && /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -MD -MT src/CMakeFiles/seu.dir/task_manager.cc.o -MF CMakeFiles/seu.dir/task_manager.cc.o.d -o CMakeFiles/seu.dir/task_manager.cc.o -c /Users/catkin/workspace/seu/src/task_manager.cc
+
+src/CMakeFiles/seu.dir/task_manager.cc.i: cmake_force
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green "Preprocessing CXX source to CMakeFiles/seu.dir/task_manager.cc.i"
+	cd /Users/catkin/workspace/seu/build/src && /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -E /Users/catkin/workspace/seu/src/task_manager.cc > CMakeFiles/seu.dir/task_manager.cc.i
+
+src/CMakeFiles/seu.dir/task_manager.cc.s: cmake_force
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green "Compiling CXX source to assembly CMakeFiles/seu.dir/task_manager.cc.s"
+	cd /Users/catkin/workspace/seu/build/src && /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -S /Users/catkin/workspace/seu/src/task_manager.cc -o CMakeFiles/seu.dir/task_manager.cc.s
+
+src/CMakeFiles/seu.dir/utils.cc.o: src/CMakeFiles/seu.dir/flags.make
+src/CMakeFiles/seu.dir/utils.cc.o: /Users/catkin/workspace/seu/src/utils.cc
+src/CMakeFiles/seu.dir/utils.cc.o: src/CMakeFiles/seu.dir/compiler_depend.ts
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/Users/catkin/workspace/seu/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_3) "Building CXX object src/CMakeFiles/seu.dir/utils.cc.o"
+	cd /Users/catkin/workspace/seu/build/src && /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -MD -MT src/CMakeFiles/seu.dir/utils.cc.o -MF CMakeFiles/seu.dir/utils.cc.o.d -o CMakeFiles/seu.dir/utils.cc.o -c /Users/catkin/workspace/seu/src/utils.cc
+
+src/CMakeFiles/seu.dir/utils.cc.i: cmake_force
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green "Preprocessing CXX source to CMakeFiles/seu.dir/utils.cc.i"
+	cd /Users/catkin/workspace/seu/build/src && /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -E /Users/catkin/workspace/seu/src/utils.cc > CMakeFiles/seu.dir/utils.cc.i
+
+src/CMakeFiles/seu.dir/utils.cc.s: cmake_force
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green "Compiling CXX source to assembly CMakeFiles/seu.dir/utils.cc.s"
+	cd /Users/catkin/workspace/seu/build/src && /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -S /Users/catkin/workspace/seu/src/utils.cc -o CMakeFiles/seu.dir/utils.cc.s
+
 # Object files for target seu
 seu_OBJECTS = \
-"CMakeFiles/seu.dir/task.cc.o"
+"CMakeFiles/seu.dir/task.cc.o" \
+"CMakeFiles/seu.dir/task_manager.cc.o" \
+"CMakeFiles/seu.dir/utils.cc.o"
 
 # External object files for target seu
-seu_EXTERNAL_OBJECTS =
+seu_EXTERNAL_OBJECTS = \
+"/Users/catkin/workspace/seu/build/src/solver/CMakeFiles/seu_solver.dir/kmeanspp.cc.o"
 
 lib/libseu.a: src/CMakeFiles/seu.dir/task.cc.o
+lib/libseu.a: src/CMakeFiles/seu.dir/task_manager.cc.o
+lib/libseu.a: src/CMakeFiles/seu.dir/utils.cc.o
+lib/libseu.a: src/solver/CMakeFiles/seu_solver.dir/kmeanspp.cc.o
 lib/libseu.a: src/CMakeFiles/seu.dir/build.make
 lib/libseu.a: src/CMakeFiles/seu.dir/link.txt
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --bold --progress-dir=/Users/catkin/workspace/seu/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_2) "Linking CXX static library ../lib/libseu.a"
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --bold --progress-dir=/Users/catkin/workspace/seu/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_4) "Linking CXX static library ../lib/libseu.a"
 	cd /Users/catkin/workspace/seu/build/src && $(CMAKE_COMMAND) -P CMakeFiles/seu.dir/cmake_clean_target.cmake
 	cd /Users/catkin/workspace/seu/build/src && $(CMAKE_COMMAND) -E cmake_link_script CMakeFiles/seu.dir/link.txt --verbose=$(VERBOSE)
 

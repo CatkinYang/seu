@@ -1,0 +1,32 @@
+[
+{
+  "directory": "/Users/catkin/workspace/seu/cmake-build-debug",
+  "command": "/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/c++ -I/Users/catkin/workspace/seu/src -I/opt/homebrew/include/eigen3 -I/Users/catkin/workspace/seu/src/include -I/Users/catkin/workspace/seu/test/include -I/Users/catkin/workspace/seu/third_party -I/Library/gurobi1102/macos_universal2/include -g -Wall -Wextra -Werror  -Wno-unused-parameter -Wno-attributes -O0 -ggdb -fsanitize=address -fno-omit-frame-pointer -fno-optimize-sibling-calls -std=gnu++17 -arch arm64 -isysroot /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX15.2.sdk -fPIC -fcolor-diagnostics -o src/CMakeFiles/seu.dir/task.cc.o -c /Users/catkin/workspace/seu/src/task.cc",
+  "file": "/Users/catkin/workspace/seu/src/task.cc",
+  "output": "src/CMakeFiles/seu.dir/task.cc.o"
+},
+{
+  "directory": "/Users/catkin/workspace/seu/cmake-build-debug",
+  "command": "/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/c++ -I/Users/catkin/workspace/seu/src -I/opt/homebrew/include/eigen3 -I/Users/catkin/workspace/seu/src/include -I/Users/catkin/workspace/seu/test/include -I/Users/catkin/workspace/seu/third_party -I/Library/gurobi1102/macos_universal2/include -g -Wall -Wextra -Werror  -Wno-unused-parameter -Wno-attributes -O0 -ggdb -fsanitize=address -fno-omit-frame-pointer -fno-optimize-sibling-calls -std=gnu++17 -arch arm64 -isysroot /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX15.2.sdk -fPIC -fcolor-diagnostics -o src/CMakeFiles/seu.dir/task_manager.cc.o -c /Users/catkin/workspace/seu/src/task_manager.cc",
+  "file": "/Users/catkin/workspace/seu/src/task_manager.cc",
+  "output": "src/CMakeFiles/seu.dir/task_manager.cc.o"
+},
+{
+  "directory": "/Users/catkin/workspace/seu/cmake-build-debug",
+  "command": "/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/c++ -I/Users/catkin/workspace/seu/src -I/opt/homebrew/include/eigen3 -I/Users/catkin/workspace/seu/src/include -I/Users/catkin/workspace/seu/test/include -I/Users/catkin/workspace/seu/third_party -I/Library/gurobi1102/macos_universal2/include -g -Wall -Wextra -Werror  -Wno-unused-parameter -Wno-attributes -O0 -ggdb -fsanitize=address -fno-omit-frame-pointer -fno-optimize-sibling-calls -std=gnu++17 -arch arm64 -isysroot /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX15.2.sdk -fPIC -fcolor-diagnostics -o src/CMakeFiles/seu.dir/utils.cc.o -c /Users/catkin/workspace/seu/src/utils.cc",
+  "file": "/Users/catkin/workspace/seu/src/utils.cc",
+  "output": "src/CMakeFiles/seu.dir/utils.cc.o"
+},
+{
+  "directory": "/Users/catkin/workspace/seu/cmake-build-debug",
+  "command": "/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/c++ -I/Users/catkin/workspace/seu/src -I/opt/homebrew/include/eigen3 -I/Users/catkin/workspace/seu/src/include -I/Users/catkin/workspace/seu/test/include -I/Users/catkin/workspace/seu/third_party -I/Library/gurobi1102/macos_universal2/include -g -Wall -Wextra -Werror  -Wno-unused-parameter -Wno-attributes -O0 -ggdb -fsanitize=address -fno-omit-frame-pointer -fno-optimize-sibling-calls -std=gnu++17 -arch arm64 -isysroot /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX15.2.sdk -fPIC -fcolor-diagnostics -o src/solver/CMakeFiles/seu_solver.dir/kmeanspp.cc.o -c /Users/catkin/workspace/seu/src/solver/kmeanspp.cc",
+  "file": "/Users/catkin/workspace/seu/src/solver/kmeanspp.cc",
+  "output": "src/solver/CMakeFiles/seu_solver.dir/kmeanspp.cc.o"
+},
+{
+  "directory": "/Users/catkin/workspace/seu/cmake-build-debug",
+  "command": "/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/c++ -I/Users/catkin/workspace/seu/src -I/opt/homebrew/include/eigen3 -I/Users/catkin/workspace/seu/src/include -I/Users/catkin/workspace/seu/test/include -I/Users/catkin/workspace/seu/third_party -I/Library/gurobi1102/macos_universal2/include -isystem /opt/homebrew/include -g -Wall -Wextra -Werror  -Wno-unused-parameter -Wno-attributes -O0 -ggdb -fsanitize=address -fno-omit-frame-pointer -fno-optimize-sibling-calls -std=gnu++17 -arch arm64 -isysroot /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX15.2.sdk -fPIE -fcolor-diagnostics -o test/CMakeFiles/test_kmeans++.dir/test_kmeans++.cc.o -c /Users/catkin/workspace/seu/test/test_kmeans++.cc",
+  "file": "/Users/catkin/workspace/seu/test/test_kmeans++.cc",
+  "output": "test/CMakeFiles/test_kmeans++.dir/test_kmeans++.cc.o"
+}
+]

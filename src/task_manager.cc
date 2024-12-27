@@ -1,15 +1,16 @@
-#include "task_init.h"
+#include "task_manager.h"
 #include "utils.h"
 #include "json/include/json/json.h"
 #include <fstream>
 #include <iostream>
 #include <memory>
+#include <ostream>
 #include <random>
 #include <sstream>
 
 namespace seu {
 
-auto TaskInit::init_from_json(const std::string &filename) -> void {
+auto TaskManager::init_from_json(const std::string &filename) -> void {
     std::string root_path = Utils::get_project_root();
     std::string path = root_path + "/src/info/taskinfo/" + filename;
     std::ifstream jsonFile(path);
@@ -50,7 +51,7 @@ auto TaskInit::init_from_json(const std::string &filename) -> void {
     return;
 }
 
-auto TaskInit::init_from_random() -> void {
+auto TaskManager::init_from_random() -> void {
     auto n = random_int_gen(5, 25); // 任务节点数
     for (int i = 0; i < n; i++) {
         auto task = task_info_init();
@@ -59,7 +60,15 @@ auto TaskInit::init_from_random() -> void {
     }
 }
 
-auto TaskInit::task_info_init() -> TaskRef {
+auto TaskManager::init_from_random(int n) -> void {
+    for (int i = 0; i < n; i++) {
+        auto task = task_info_init();
+        m_random_task.insert({m_taskid, task});
+        m_taskid++;
+    }
+}
+
+auto TaskManager::task_info_init() -> TaskRef {
     auto clb = random_int_gen(2000, 3000);
     auto dsp = random_int_gen(0, 80);
     auto bram = random_int_gen(0, 80);
@@ -68,10 +77,10 @@ auto TaskInit::task_info_init() -> TaskRef {
     return task;
 }
 
-auto TaskInit::task_info_init_custom(std::pair<int, int> clb,
-                                     std::pair<int, int> dsp,
-                                     std::pair<int, int> bram,
-                                     std::pair<int, int> exec) -> TaskRef {
+auto TaskManager::task_info_init_custom(std::pair<int, int> clb,
+                                        std::pair<int, int> dsp,
+                                        std::pair<int, int> bram,
+                                        std::pair<int, int> exec) -> TaskRef {
     auto clbn = random_int_gen(clb.first, clb.second);
     auto dspn = random_int_gen(dsp.first, dsp.second);
     auto bramn = random_int_gen(bram.first, bram.second);
@@ -81,12 +90,19 @@ auto TaskInit::task_info_init_custom(std::pair<int, int> clb,
     return task;
 }
 
-auto TaskInit::random_int_gen(int lower, int upper) -> int {
+auto TaskManager::random_int_gen(int lower, int upper) -> int {
     std::random_device rd;  // 随机数生成器
     std::mt19937 gen(rd()); // 以随机设备作为种子的 Mersenne Twister 生成器
     std::uniform_int_distribution<> distr(lower,
                                           upper); //  均匀分布的整数分布
     return distr(gen);                            //
+}
+
+void TaskManager::TaskInfoPrint(std::unordered_map<int, TaskRef> TaskSet) {
+    for (const auto &[k, v] : TaskSet) {
+        std::cout << "task_id: " << k << "  resources: " << v->getClb() << " "
+                  << v->getDsp() << " " << v->getBram() << std::endl;
+    }
 }
 
 } // namespace seu

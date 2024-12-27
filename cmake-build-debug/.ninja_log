@@ -1,0 +1,8 @@
+# ninja log v5
+2	607	1735301667622042643	src/CMakeFiles/seu.dir/task.cc.o	7363965ba62f280b
+2	724	1735301667739528000	src/CMakeFiles/seu.dir/utils.cc.o	1c476b38d59db0bc
+2	874	1735301667891677299	test/CMakeFiles/test_kmeans++.dir/test_kmeans++.cc.o	deb02db6065ad721
+2	965	1735301667983116221	src/CMakeFiles/seu.dir/task_manager.cc.o	a41c57d86d3cec4b
+2	1388	1735301668405325304	src/solver/CMakeFiles/seu_solver.dir/kmeanspp.cc.o	459c9e76a81cef93
+1389	1424	1735301668447303000	lib/libseu.a	1fc46f98e323f6ab
+1424	1551	1735301668571647848	bin/test/test_kmeans++	783c18ba08292ca6

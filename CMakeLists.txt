@@ -74,6 +74,7 @@ set(SEU_SRC_INCLUDE_DIR ${PROJECT_SOURCE_DIR}/src/include)
 set(SEU_TEST_INCLUDE_DIR ${PROJECT_SOURCE_DIR}/test/include)
 set(SEU_THIRD_PARTY_INCLUDE_DIR ${PROJECT_SOURCE_DIR}/third_party)
 
+include_directories("/opt/homebrew/include/eigen3")
 include_directories(${SEU_SRC_INCLUDE_DIR} ${SEU_TEST_INCLUDE_DIR}
                     ${SEU_THIRD_PARTY_INCLUDE_DIR})
 include_directories(BEFORE src) # This is needed for gtest.
@@ -84,6 +85,10 @@ endfunction()
 
 set(CMAKE_MODULE_PATH "${SEU_BUILD_SUPPORT_DIR}/cmake;${CMAKE_MODULE_PATH}")
 find_package(jsoncpp)
+find_package(GUROBI)
+
+include_directories(${GUROBI_INCLUDE_DIRS})
 
 add_subdirectory(third_party)
 add_subdirectory(src)
+add_subdirectory(test)

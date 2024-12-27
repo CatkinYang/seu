@@ -164,6 +164,54 @@ task.cc.s:
 	cd /Users/catkin/workspace/seu/build && $(MAKE) $(MAKESILENT) -f src/CMakeFiles/seu.dir/build.make src/CMakeFiles/seu.dir/task.cc.s
 .PHONY : task.cc.s
 
+task_manager.o: task_manager.cc.o
+.PHONY : task_manager.o
+
+# target to build an object file
+task_manager.cc.o:
+	cd /Users/catkin/workspace/seu/build && $(MAKE) $(MAKESILENT) -f src/CMakeFiles/seu.dir/build.make src/CMakeFiles/seu.dir/task_manager.cc.o
+.PHONY : task_manager.cc.o
+
+task_manager.i: task_manager.cc.i
+.PHONY : task_manager.i
+
+# target to preprocess a source file
+task_manager.cc.i:
+	cd /Users/catkin/workspace/seu/build && $(MAKE) $(MAKESILENT) -f src/CMakeFiles/seu.dir/build.make src/CMakeFiles/seu.dir/task_manager.cc.i
+.PHONY : task_manager.cc.i
+
+task_manager.s: task_manager.cc.s
+.PHONY : task_manager.s
+
+# target to generate assembly for a file
+task_manager.cc.s:
+	cd /Users/catkin/workspace/seu/build && $(MAKE) $(MAKESILENT) -f src/CMakeFiles/seu.dir/build.make src/CMakeFiles/seu.dir/task_manager.cc.s
+.PHONY : task_manager.cc.s
+
+utils.o: utils.cc.o
+.PHONY : utils.o
+
+# target to build an object file
+utils.cc.o:
+	cd /Users/catkin/workspace/seu/build && $(MAKE) $(MAKESILENT) -f src/CMakeFiles/seu.dir/build.make src/CMakeFiles/seu.dir/utils.cc.o
+.PHONY : utils.cc.o
+
+utils.i: utils.cc.i
+.PHONY : utils.i
+
+# target to preprocess a source file
+utils.cc.i:
+	cd /Users/catkin/workspace/seu/build && $(MAKE) $(MAKESILENT) -f src/CMakeFiles/seu.dir/build.make src/CMakeFiles/seu.dir/utils.cc.i
+.PHONY : utils.cc.i
+
+utils.s: utils.cc.s
+.PHONY : utils.s
+
+# target to generate assembly for a file
+utils.cc.s:
+	cd /Users/catkin/workspace/seu/build && $(MAKE) $(MAKESILENT) -f src/CMakeFiles/seu.dir/build.make src/CMakeFiles/seu.dir/utils.cc.s
+.PHONY : utils.cc.s
+
 # Help Target
 help:
 	@echo "The following are some of the valid targets for this Makefile:"
@@ -177,6 +225,12 @@ help:
 	@echo "... task.o"
 	@echo "... task.i"
 	@echo "... task.s"
+	@echo "... task_manager.o"
+	@echo "... task_manager.i"
+	@echo "... task_manager.s"
+	@echo "... utils.o"
+	@echo "... utils.i"
+	@echo "... utils.s"
 .PHONY : help
 
 

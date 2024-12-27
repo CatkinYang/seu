@@ -37,6 +37,14 @@ class Task {
     }
     auto getStatus() { return m_status; }
 
+    void addClb(int n) { m_clb += n; }
+    void addDsp(int n) { m_dsp += n; }
+    void addBram(int n) { m_bram += n; }
+
+    void setClb(int n) { m_clb = n; }
+    void setDsp(int n) { m_dsp = n; }
+    void setBram(int n) { m_bram = n; }
+
   private:
     // 任务id
     int m_id = 0;

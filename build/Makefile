@@ -139,6 +139,45 @@ seu/fast:
 	$(MAKE) $(MAKESILENT) -f src/CMakeFiles/seu.dir/build.make src/CMakeFiles/seu.dir/build
 .PHONY : seu/fast
 
+#=============================================================================
+# Target rules for targets named seu_solver
+
+# Build rule for target.
+seu_solver: cmake_check_build_system
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/Makefile2 seu_solver
+.PHONY : seu_solver
+
+# fast build rule for target.
+seu_solver/fast:
+	$(MAKE) $(MAKESILENT) -f src/solver/CMakeFiles/seu_solver.dir/build.make src/solver/CMakeFiles/seu_solver.dir/build
+.PHONY : seu_solver/fast
+
+#=============================================================================
+# Target rules for targets named build-tests
+
+# Build rule for target.
+build-tests: cmake_check_build_system
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/Makefile2 build-tests
+.PHONY : build-tests
+
+# fast build rule for target.
+build-tests/fast:
+	$(MAKE) $(MAKESILENT) -f test/CMakeFiles/build-tests.dir/build.make test/CMakeFiles/build-tests.dir/build
+.PHONY : build-tests/fast
+
+#=============================================================================
+# Target rules for targets named test_kmeans++
+
+# Build rule for target.
+test_kmeans++: cmake_check_build_system
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/Makefile2 test_kmeans++
+.PHONY : test_kmeans++
+
+# fast build rule for target.
+test_kmeans++/fast:
+	$(MAKE) $(MAKESILENT) -f test/CMakeFiles/test_kmeans++.dir/build.make test/CMakeFiles/test_kmeans++.dir/build
+.PHONY : test_kmeans++/fast
+
 # Help Target
 help:
 	@echo "The following are some of the valid targets for this Makefile:"
@@ -148,7 +187,10 @@ help:
 	@echo "... edit_cache"
 	@echo "... rebuild_cache"
 	@echo "... test"
+	@echo "... build-tests"
 	@echo "... seu"
+	@echo "... seu_solver"
+	@echo "... test_kmeans++"
 .PHONY : help
 
 

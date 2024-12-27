@@ -41,6 +41,7 @@ if(NOT CMAKE_INSTALL_LOCAL_ONLY)
   # Include the install script for each subdirectory.
   include("/Users/catkin/workspace/seu/build/third_party/cmake_install.cmake")
   include("/Users/catkin/workspace/seu/build/src/cmake_install.cmake")
+  include("/Users/catkin/workspace/seu/build/test/cmake_install.cmake")
 
 endif()
 

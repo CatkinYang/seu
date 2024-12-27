@@ -37,3 +37,10 @@ if(NOT DEFINED CMAKE_OBJDUMP)
   set(CMAKE_OBJDUMP "/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/objdump")
 endif()
 
+if(NOT CMAKE_INSTALL_LOCAL_ONLY)
+  # Include the install script for each subdirectory.
+  include("/Users/catkin/workspace/seu/build/src/pynq/cmake_install.cmake")
+  include("/Users/catkin/workspace/seu/build/src/solver/cmake_install.cmake")
+
+endif()
+

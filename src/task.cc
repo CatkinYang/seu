@@ -15,4 +15,5 @@ Task::Task(int id, int clb, int dsp, int bram, int exec)
     m_parent.clear();
     m_status = TaskStatus::WAITING;
 }
+
 } // namespace seu

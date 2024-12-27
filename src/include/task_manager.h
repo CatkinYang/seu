@@ -5,14 +5,15 @@
 
 namespace seu {
 
-class TaskInit {
+class TaskManager {
   public:
-    TaskInit() = default;
+    TaskManager() = default;
 
     // 从json环境中生成任务
     auto init_from_json(const std::string &filename) -> void;
 
     auto init_from_random() -> void;
+    auto init_from_random(int task_num) -> void;
     auto task_info_init() -> TaskRef;
     auto task_info_init_custom(std::pair<int, int> clb, std::pair<int, int> dsp,
                                std::pair<int, int> bram,
@@ -25,6 +26,9 @@ class TaskInit {
         return m_random_task;
     };
     auto getJsonTask() -> std::unordered_map<int, TaskRef> { return m_tasks; };
+
+    auto random_task_set_clear() { m_random_task.clear(); }
+    static void TaskInfoPrint(std::unordered_map<int, TaskRef> TaskSet);
 
   private:
     // init from json
