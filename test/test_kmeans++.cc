@@ -8,8 +8,10 @@
 
 int main() {
     auto TM = std::make_shared<seu::TaskManager>();
-    TM->init_from_random(20);
-    auto random_task_set = TM->getRandomTask();
+    // TM->init_from_random(20);
+    TM->init_from_json("test.json");
+    std::cout << "init from json successfully" << std::endl;
+    auto random_task_set = TM->getJsonTask();
     seu::TaskManager::TaskInfoPrint(random_task_set);
     std::vector<seu::TaskRef> centroids;
     std::unordered_map<int, int> assignments;
@@ -22,6 +24,7 @@ int main() {
         centroids[i] =
             std::make_shared<seu::Task>(i, 0, 0, 0, 0); // 初始化每个聚类中心
     }
+    std::cout << "begin cluster" << std::endl;
     seu::kmeanspp::kMeansPlusPlusClustering(
         random_task_set, centroids, assignments, tolerance, max_iterations);
 
@@ -39,6 +42,8 @@ int main() {
                       << random_task_set.at(i)->getBram() << std::endl;
         }
     }
+    auto cluster_info = seu::kmeanspp::getClusterMaxResourcesNumber(
+        clusterToTask, random_task_set);
 
     return 0;
 }

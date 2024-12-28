@@ -981,8 +981,8 @@ src/solver/CMakeFiles/seu_solver.dir/kmeanspp.cc.o: \
   /Library/gurobi1102/macos_universal2/include/gurobi_c++.h \
   /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX15.2.sdk/usr/include/c++/v1/iostream \
   /Library/gurobi1102/macos_universal2/include/gurobi_c.h \
-  /Users/catkin/workspace/seu/src/include/task_manager.h \
   /Users/catkin/workspace/seu/src/include/task.h \
+  /Users/catkin/workspace/seu/src/include/task_manager.h \
   /opt/homebrew/include/eigen3/Eigen/Dense \
   /opt/homebrew/include/eigen3/Eigen/Core \
   /opt/homebrew/include/eigen3/Eigen/src/Core/util/DisableStupidWarnings.h \

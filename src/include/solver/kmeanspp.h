@@ -1,6 +1,9 @@
 #pragma once
 #include "marco.h"
+#include "task.h"
 #include "task_manager.h"
+#include <tuple>
+#include <unordered_map>
 
 namespace seu {
 
@@ -35,6 +38,12 @@ class kmeanspp {
                              std::vector<TaskRef> &centroids,
                              std::unordered_map<int, int> &assignments,
                              double tolerance, int max_iterations) -> void;
+
+    static auto getClusterMaxResourcesNumber(
+        std::unordered_map<int, std::vector<int>> clusterToTask,
+        std::unordered_map<int, TaskRef>
+
+        ) -> std::unordered_map<int, std::tuple<int, int, int>>;
 };
 
 } // namespace seu

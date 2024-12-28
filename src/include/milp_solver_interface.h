@@ -88,13 +88,6 @@ class milp_solver_interface {
 
     pfsRef m_pfs;
     ptsRef m_pts;
-
-    // int zynq_start_optimizer(param_to_solver *, param_from_solver *);
-    // int virtex_start_optimizer(param_to_solver *, param_from_solver *);
-    // int virtex_start_optimizer_v5(param_to_solver *, param_from_solver *);
-    // int pynq_start_optimizer(param_to_solver *, param_from_solver *);
-    // int vc707_start_optimizer(param_to_solver *, param_from_solver *);
-    // int vcu118_start_optimizer(param_to_solver *, param_from_solver *);
 };
 using msiRef = shared_ptr<milp_solver_interface>;
 

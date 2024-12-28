@@ -4,6 +4,7 @@
 #include <ctime>
 #include <iostream>
 #include <limits>
+#include <tuple>
 #include <unordered_map>
 #include <vector>
 
@@ -11,10 +12,10 @@ namespace seu {
 
 auto kmeanspp::euclideanDistance(const TaskRef &t1, const TaskRef &t2)
     -> double {
-    // if (!t1 || !t2) {
-    //     throw std::runtime_error(
-    //         "Null pointer encountered in euclideanDistance");
-    // }
+    if (!t1 || !t2) {
+        throw std::runtime_error(
+            "Null pointer encountered in euclideanDistance");
+    }
     Eigen::Vector3d v1(t1->getClb(), t1->getDsp(), t1->getBram());
     Eigen::Vector3d v2(t2->getClb(), t2->getDsp(), t2->getBram());
     return (v1 - v2).norm();
@@ -147,6 +148,24 @@ auto kmeanspp::kMeansPlusPlusClustering(
         iteration++;
     } while (!isConverged(old_centroids, centroids, tolerance) &&
              iteration < max_iterations);
+}
+
+auto kmeanspp::getClusterMaxResourcesNumber(
+    std::unordered_map<int, std::vector<int>> clusterToTask,
+    std::unordered_map<int, TaskRef> task_set)
+    -> std::unordered_map<int, std::tuple<int, int, int>> {
+    std::unordered_map<int, std::tuple<int, int, int>> res;
+    int clb = INT_MIN, dsp = INT_MIN, bram = INT_MIN;
+    for (const auto &[k, v] : clusterToTask) {
+        for (auto i : v) {
+            clb = std::max(clb, task_set.at(i)->getClb());
+            dsp = std::max(dsp, task_set.at(i)->getDsp());
+            bram = std::max(bram, task_set.at(i)->getBram());
+        }
+        auto tuple = std::make_tuple(clb, dsp, bram);
+        res[k] = tuple;
+    }
+    return res;
 }
 
 } // namespace seu
