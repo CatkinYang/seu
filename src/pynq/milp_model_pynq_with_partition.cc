@@ -1,96 +1,197 @@
+#include "fpga.h"
 #include "marco.h"
 #include "milp_solver_interface.h"
 #include "pynq/pynq_var.h"
-#include <atomic>
+#include <iostream>
+#include <vector>
 
 namespace seu {
 
-int milp_solver_pynq::solve_milp_pynq(pfsRef to_sim) {
+int milp_solver_pynq::solve_milp(Taskset &t, Platform &platform,
+                                 vector<double> &slacks, bool preemptive_FRI,
+                                 pfsRef to_sim) {
     int status;
-    int i, k, j;
-    int dist_0, dist_1, dist_2;
-    std::atomic<int> m;
-    std::atomic<int> l;
+    unsigned long i, k, j, l, m;
+    unsigned long dist_0, dist_1, dist_2;
+    unsigned long num_active_partitions = 0;
 
     // define variables
     try {
-        // 设置gurobi环境，并启动
         GRBEnv env = GRBEnv();
         GRBConstr *c = NULL;
         GRBModel model = GRBModel(env);
 
-        // 根据 num_slots 和 num_forbidden_slots 的大小设置 delta_size
         if (num_slots >= num_forbidden_slots)
             delta_size = num_slots;
         else
             delta_size = num_forbidden_slots;
 
         // Variable definition
+
+        GRBVar2DArray b(platform.N_FPGA_RESOURCES);
+        for (uint x = 0; x < platform.N_FPGA_RESOURCES; x++) {
+            GRBVarArray per_partition(t.maxPartitions);
+            b[x] = per_partition;
+
+            for (uint k = 0; k < t.maxPartitions; k++)
+                b[x][k] = model.addVar(0.0, GRB_INFINITY, 0.0, GRB_CONTINUOUS);
+        }
+
+        // ------------------------------------------------------------
+        // ------------------------------------------------------------
+        // Variable defintion: A
+        // Meaning: A[a][k] == 1 iff the 'a'-th HW-task is allocated to
+        //          the the 'k'-th partition
+        // ------------------------------------------------------------
+
+        GRBVar2DArray A(t.maxHW_Tasks);
+        for (uint a = 0; a < t.maxHW_Tasks; a++) {
+            GRBVarArray per_partition(t.maxPartitions);
+            A[a] = per_partition;
+
+            for (uint k = 0; k < t.maxPartitions; k++)
+                A[a][k] = model.addVar(0.0, 1.0, 0.0, GRB_INTEGER);
+        }
+
+        // ------------------------------------------------------------
+        // ------------------------------------------------------------
+        // Variable defintion: gamma
+        // Meaning: gamma[a]==1 iff the 'a'-th HW-task is subject to DPR
+        // ------------------------------------------------------------
+
+        GRBVarArray gamma_part(t.maxHW_Tasks);
+        for (uint a = 0; a < t.maxHW_Tasks; a++) {
+            gamma_part[a] = model.addVar(0.0, 1.0, 0.0, GRB_INTEGER);
+        }
+        // ------------------------------------------------------------
+        // ------------------------------------------------------------
+        // Variable defintion: I_SLOT
+        // Meaning: I_SLOT[a][b] = interference caused by 'b'-th HW-Task
+        // to the 'a'-th HW-Task due to slot contention
+        // ------------------------------------------------------------
+
+        GRBVar2DArray I_SLOT(t.maxHW_Tasks);
+        for (uint a = 0; a < t.maxHW_Tasks; a++) {
+            GRBVarArray per_other_HWTask(t.maxHW_Tasks);
+            I_SLOT[a] = per_other_HWTask;
+
+            for (uint b = 0; b < t.maxHW_Tasks; b++)
+                I_SLOT[a][b] =
+                    model.addVar(0.0, GRB_INFINITY, 0.0, GRB_CONTINUOUS);
+        }
+
+        // ------------------------------------------------------------
+        // ------------------------------------------------------------
+        // Variable defintion: DELTA
+        // Meaning: DELTA[a][i] = interference caused by HW-Tasks used
+        // by the 'i'-th SW-Task to the 'a'-th HW-Task
+        // ------------------------------------------------------------
+
+        GRBVar2DArray DELTA(t.maxHW_Tasks);
+        for (uint a = 0; a < t.maxHW_Tasks; a++) {
+            GRBVarArray per_SWTask(t.maxSW_Tasks);
+            DELTA[a] = per_SWTask;
+
+            for (uint i = 0; i < t.maxSW_Tasks; i++)
+                DELTA[a][i] =
+                    model.addVar(0.0, GRB_INFINITY, 0.0, GRB_CONTINUOUS);
+        }
+
+        // ------------------------------------------------------------
+        // ------------------------------------------------------------
+        // Variable defintion: r
+        // Meaning: r[a] = reconfiguration time of 'a'-th HW-Task
+        // ------------------------------------------------------------
+
+        GRBVarArray r(t.maxHW_Tasks);
+        for (uint a = 0; a < t.maxHW_Tasks; a++) {
+            r[a] = model.addVar(0.0, GRB_INFINITY, 0.0, GRB_CONTINUOUS);
+        }
+
+        // ------------------------------------------------------------
+        // ------------------------------------------------------------
+        // Variable defintion: DELTA_NP
+        // Meaning: DELTA_NP[a][b] = interference due to non-preemptive
+        // reconfiguration *directly* incurred by the 'b'-th HW-Task
+        // during a request for the 'a'-th HW-Task
+        // ------------------------------------------------------------
+
+        GRBVar2DArray DELTA_NP(t.maxHW_Tasks);
+        if (!preemptive_FRI) {
+            for (uint a = 0; a < t.maxHW_Tasks; a++) {
+                GRBVarArray per_other_HWTask(t.maxHW_Tasks);
+                DELTA_NP[a] = per_other_HWTask;
+
+                for (uint b = 0; b < t.maxHW_Tasks; b++)
+                    DELTA_NP[a][b] =
+                        model.addVar(0.0, GRB_INFINITY, 0.0, GRB_CONTINUOUS);
+            }
+        }
+
         /**********************************************************************
          name: x
          type: integer
          func: x[i][k] represent the left and right x coordinate of slot 'i'
-         x: 二维数组,存储的是slot i的左右横坐标,初始化为0
         ***********************************************************************/
-        GRBVar2DArray x(num_slots);
 
-        for (i = 0; i < num_slots; i++) {
+        GRBVar2DArray x(num_slots);
+        for (i = 0; i < (uint)num_slots; i++) {
             GRBVarArray each_slot(2);
             x[i] = each_slot;
 
             for (k = 0; k < 2; k++)
                 x[i][k] = model.addVar(0.0, W, 0.0, GRB_INTEGER);
         }
+
         /**********************************************************************
          name: y
          type: integer
          func: y[i] represents the bottom left y coordinate of slot 'i'
-         y: 一维数组,存储的是slot i的左下角的y坐标
         ***********************************************************************/
-        GRBVarArray y(num_slots);
 
-        for (i = 0; i < num_slots; i++) {
+        GRBVarArray y(num_slots);
+        for (i = 0; i < (uint)num_slots; i++) {
             y[i] = model.addVar(0.0, num_clk_regs, 0.0, GRB_INTEGER);
         }
+
         /**********************************************************************
-         name: wseu
+         name: w
          type: integer
          func: w[i] represents the width of the slot 'i'
-         w: 一维数组，存储的是slot i的宽度
         ***********************************************************************/
-        GRBVarArray w(num_slots);
 
-        for (i = 0; i < num_slots; i++) {
+        GRBVarArray w(num_slots);
+        for (i = 0; i < (uint)num_slots; i++) {
             w[i] = model.addVar(0.0, W, 0.0, GRB_INTEGER);
         }
+
         /**********************************************************************
          name: h
          type: integer
          func: h[i] represents the height of slot 'i'
-         h: 一维数组，存储的是slot i的高度
         ***********************************************************************/
-        GRBVarArray h(num_slots);
 
-        for (i = 0; i < num_slots; i++) {
+        GRBVarArray h(num_slots);
+        for (i = 0; i < (uint)num_slots; i++) {
             h[i] = model.addVar(0.0, H, 0.0, GRB_INTEGER);
         }
+
         /**********************************************************************
          name: z
          type: binary
          func: z[i][k][][] is used to define the constraints on the distribution
         of resource on the FPGA fabric
-           四维数组：用来定义FPGA资源分布约束
+
                z[0][i][x_1/2][] == for clb
                z[1][i][x_1/2][] == for bram
                z[2][i][x_1/2][] == for dsp
         ***********************************************************************/
         GRBVar4DArray z(6);
-
         for (i = 0; i < 6; i++) {
             GRBVar3DArray each_slot(num_slots);
             z[i] = each_slot;
 
-            for (k = 0; k < num_slots; k++) {
+            for (k = 0; k < (uint)num_slots; k++) {
                 GRBVar2DArray x_coord(2);
                 z[i][k] = x_coord;
 
@@ -103,25 +204,28 @@ int milp_solver_pynq::solve_milp_pynq(pfsRef to_sim) {
                 }
             }
         }
-        /**********************************************************************
-         name: clb
-         type: integer
-         func: clb[i][k] represents the number of clbs in (0, x_1) & (0, x_2)
-               in a single row.
-               'k' = 0 -> x_1
-               'k' = 1 -> x_2
-               the total numbe clb in slot 'i' is then calculated by
-                clb in 'i' = clb[i][1] - clb[i][0]
-        ***********************************************************************/
-        GRBVar2DArray clb(num_slots);
 
-        for (i = 0; i < num_slots; i++) {
+        /**********************************************************************
+          name: clb
+          type: integer
+          func: clb[i][k] represents the number of clbs in (0, x_1) & (0, x_2)
+                in a single row.
+                'k' = 0 -> x_1
+                'k' = 1 -> x_2
+
+                the total numbe clb in slot 'i' is then calculated by
+                 clb in 'i' = clb[i][1] - clb[i][0]
+         ***********************************************************************/
+
+        GRBVar2DArray clb(num_slots);
+        for (i = 0; i < (uint)num_slots; i++) {
             GRBVarArray each_slot(2);
             clb[i] = each_slot;
 
             for (k = 0; k < 2; k++)
                 clb[i][k] = model.addVar(0.0, clb_max, 0.0, GRB_INTEGER);
         }
+
         /**********************************************************************
           name: bram
           type: integer
@@ -129,18 +233,20 @@ int milp_solver_pynq::solve_milp_pynq(pfsRef to_sim) {
                 in a single row.
                 'k' = 0 -> x_1
                 'k' = 1 -> x_2
+
                 the total numbe brams in slot 'i' is then calculated by
                  bram in 'i' = bram[i][1] - bram[i][0]
          ***********************************************************************/
-        GRBVar2DArray bram(num_slots);
 
-        for (i = 0; i < num_slots; i++) {
+        GRBVar2DArray bram(num_slots);
+        for (i = 0; i < (uint)num_slots; i++) {
             GRBVarArray each_slot(2);
             bram[i] = each_slot;
 
             for (k = 0; k < 2; k++)
                 bram[i][k] = model.addVar(0.0, bram_max, 0.0, GRB_INTEGER);
         }
+
         /**********************************************************************
          name: dsp
          type: integer
@@ -152,31 +258,32 @@ int milp_solver_pynq::solve_milp_pynq(pfsRef to_sim) {
                the total numbe brams in slot 'i' is then calculated by
                 dsp in 'i' = dsp[i][1] - dsp[i][0]
         ***********************************************************************/
-        GRBVar2DArray dsp(num_slots);
 
-        for (i = 0; i < num_slots; i++) {
+        GRBVar2DArray dsp(num_slots);
+        for (i = 0; i < (uint)num_slots; i++) {
             GRBVarArray each_slot(2);
             dsp[i] = each_slot;
 
             for (k = 0; k < 2; k++)
                 dsp[i][k] = model.addVar(0.0, dsp_max, 0.0, GRB_INTEGER);
         }
-        /**********************************************************************
-         name: clb-fbdn
-         type: integer
-         func: clb_fbdn[i][k] represents the number of clbs in (0, x_1) & (0,
-        x_2) in a single row. 'k' = 0 -> x_1 'k' = 1 -> x_2
 
-               the total number of clb in forbidden region 'i' is then
-        calculated by clb_fbdn in 'i' = clb_fbdn[i][1] - clb_fbdn[i][0]
-        ***********************************************************************/
+        /**********************************************************************
+          name: clb-fbdn
+          type: integer
+          func: clb_fbdn[i][k] represents the number of clbs in (0, x_1) & (0,
+         x_2) in a single row. 'k' = 0 -> x_1 'k' = 1 -> x_2
+
+                the total number of clb in forbidden region 'i' is then
+         calculated by clb_fbdn in 'i' = clb_fbdn[i][1] - clb_fbdn[i][0]
+         ***********************************************************************/
         GRBVar3DArray clb_fbdn(
             2); // TODO: This should be modified to num_forbidden_slots
         for (i = 0; i < 2; i++) {
             GRBVar2DArray each_slot(num_slots);
             clb_fbdn[i] = each_slot;
 
-            for (j = 0; j < num_slots; j++) {
+            for (j = 0; j < (uint)num_slots; j++) {
                 GRBVarArray each_slot_fbdn(2);
 
                 clb_fbdn[i][j] = each_slot_fbdn;
@@ -185,23 +292,24 @@ int milp_solver_pynq::solve_milp_pynq(pfsRef to_sim) {
                         model.addVar(0.0, clb_max, 0.0, GRB_INTEGER);
             }
         }
+
         /**********************************************************************
         The following 3 variables record the total number of CLB, BRAM and DSP
         in forbidden regions.
         ***********************************************************************/
 
         GRBVarArray clb_fbdn_tot(num_slots);
-        for (i = 0; i < num_slots; i++) {
+        for (i = 0; i < (uint)num_slots; i++) {
             clb_fbdn_tot[i] = model.addVar(0, clb_max, 0.0, GRB_INTEGER);
         }
 
         GRBVarArray bram_fbdn_tot(num_slots);
-        for (i = 0; i < num_slots; i++) {
+        for (i = 0; i < (uint)num_slots; i++) {
             bram_fbdn_tot[i] = model.addVar(0, bram_max, 0.0, GRB_INTEGER);
         }
 
         GRBVarArray dsp_fbdn_tot(num_slots);
-        for (i = 0; i < num_slots; i++) {
+        for (i = 0; i < (uint)num_slots; i++) {
             dsp_fbdn_tot[i] = model.addVar(0, dsp_max, 0.0, GRB_INTEGER);
         }
 
@@ -221,7 +329,7 @@ int milp_solver_pynq::solve_milp_pynq(pfsRef to_sim) {
             GRBVar2DArray each_slot(num_slots);
             bram_fbdn[j] = each_slot;
 
-            for (i = 0; i < num_slots; i++) {
+            for (i = 0; i < (uint)num_slots; i++) {
                 GRBVarArray each_slot_fbdn(2);
                 bram_fbdn[j][i] = each_slot_fbdn;
 
@@ -240,12 +348,11 @@ int milp_solver_pynq::solve_milp_pynq(pfsRef to_sim) {
         by dsp in 'i' = dsp_fbdn[i][1] - dsp_fbdn[i][0]
         ***********************************************************************/
         GRBVar3DArray dsp_fbdn(2);
-
         for (j = 0; j < 2; j++) {
             GRBVar2DArray each_fbdn_slot(num_slots);
             dsp_fbdn[j] = each_fbdn_slot;
 
-            for (i = 0; i < num_slots; i++) {
+            for (i = 0; i < (uint)num_slots; i++) {
                 GRBVarArray each_slot(2);
                 dsp_fbdn[j][i] = each_slot;
 
@@ -254,41 +361,41 @@ int milp_solver_pynq::solve_milp_pynq(pfsRef to_sim) {
                         model.addVar(0.0, dsp_max, 0.0, GRB_INTEGER);
             }
         }
+        // #endif
         /**********************************************************************
          name: beta
          type: binary
          func: beta[i][k] = 1 if clock region k is part of slot 'i'
         ***********************************************************************/
-        GRBVar2DArray beta(num_slots);
 
-        for (i = 0; i < num_slots; i++) {
+        GRBVar2DArray beta(num_slots);
+        for (i = 0; i < (uint)num_slots; i++) {
             GRBVarArray for_each_clk_reg(num_clk_regs);
             beta[i] = for_each_clk_reg;
 
-            for (j = 0; j < num_clk_regs; j++) {
+            for (j = 0; j < (uint)num_clk_regs; j++) {
                 beta[i][j] = model.addVar(0.0, 1.0, 0.0, GRB_BINARY);
             }
         }
+
         /**********************************************************************
          name: tau
          type: integer
          func: tau[i][k] is used to linearize the function which is used to
-         compute the number of available resources. The first index is used to
+        compute the number of available resources. The first index is used to
                denote the type of resource and the second is used to denote
                the slot
-         用于线性化计算可用资源数量的函数。第一个索引用于表示资源类型，第二个索引用于表示插槽。
         ***********************************************************************/
         GRBVar3DArray tau(3); // for clb, bram, dsp
-
         for (i = 0; i < 3; i++) {
             GRBVar2DArray each_slot(num_slots);
             tau[i] = each_slot;
 
-            for (l = 0; l < num_slots; l++) {
+            for (l = 0; l < (uint)num_slots; l++) {
                 GRBVarArray for_each_clk_reg(num_clk_regs);
 
                 tau[i][l] = for_each_clk_reg;
-                for (k = 0; k < num_clk_regs; k++) {
+                for (k = 0; k < (uint)num_clk_regs; k++) {
                     tau[i][l][k] =
                         model.addVar(0.0, GRB_INFINITY, 0.0, GRB_INTEGER);
                 }
@@ -304,7 +411,6 @@ int milp_solver_pynq::solve_milp_pynq(pfsRef to_sim) {
                the slot
         ***********************************************************************/
         GRBVar4DArray tau_fbdn(2); // for forbidden clb, bram, dsp
-
         for (j = 0; j < 2; j++) {
             GRBVar3DArray each_slot_fbdn(3);
             tau_fbdn[j] = each_slot_fbdn;
@@ -313,11 +419,11 @@ int milp_solver_pynq::solve_milp_pynq(pfsRef to_sim) {
                 GRBVar2DArray each_slot(num_slots);
                 tau_fbdn[j][i] = each_slot;
 
-                for (l = 0; l < num_slots; l++) {
+                for (l = 0; l < (uint)num_slots; l++) {
                     GRBVarArray for_each_clk_reg(num_clk_regs);
 
                     tau_fbdn[j][i][l] = for_each_clk_reg;
-                    for (k = 0; k < num_clk_regs; k++) {
+                    for (k = 0; k < (uint)num_clk_regs; k++) {
                         tau_fbdn[j][i][l][k] =
                             model.addVar(0.0, GRB_INFINITY, 0.0, GRB_INTEGER);
                     }
@@ -326,20 +432,20 @@ int milp_solver_pynq::solve_milp_pynq(pfsRef to_sim) {
         }
 
         /**********************************************************************
-         name: gamma
-         type: binary
-         func: gamma[i][k] = 1 iff bottom left x coordinate of slot 'i' is found
-               to the left of the bottom left x coordinate of slot 'k'
-               gamma[i][k] = 1 if x_i <= x_k
-        表示槽 i 的左下角 x 坐标是否小于槽 k 的左下角 x 坐标。
-        ***********************************************************************/
-        GRBVar2DArray gamma(num_slots);
+          name: gamma
+          type: binary
+          func: gamma[i][k] = 1 iff bottom left x coordinate of slot 'i' is
+         found to the left of the bottom left x coordinate of slot 'k'
 
-        for (i = 0; i < num_slots; i++) {
+                gamma[i][k] = 1 if x_i <= x_k
+         ***********************************************************************/
+
+        GRBVar2DArray gamma(num_slots);
+        for (i = 0; i < (uint)num_slots; i++) {
             GRBVarArray each_slot(num_slots);
             gamma[i] = each_slot;
 
-            for (k = 0; k < num_slots; k++)
+            for (k = 0; k < (uint)num_slots; k++)
                 gamma[i][k] = model.addVar(0.0, 1.0, 0.0, GRB_BINARY);
         }
 
@@ -348,16 +454,16 @@ int milp_solver_pynq::solve_milp_pynq(pfsRef to_sim) {
          type: binary
          func: theta[i][k] = 1 iff the bottom left y coordinate of slot 'i' is
                found below the bottom left y coordinate of slot 'k'
-               theta[i][k] = 1 if y_i <= y_k
-        表示槽 i 的左下角 y 坐标是否小于槽 k 的左下角 y 坐标。
-        ***********************************************************************/
-        GRBVar2DArray theta(num_slots);
 
-        for (i = 0; i < num_slots; i++) {
+               theta[i][k] = 1 if y_i <= y_k
+        ***********************************************************************/
+
+        GRBVar2DArray theta(num_slots);
+        for (i = 0; i < (uint)num_slots; i++) {
             GRBVarArray each_slot(num_slots);
             theta[i] = each_slot;
 
-            for (k = 0; k < num_slots; k++)
+            for (k = 0; k < (uint)num_slots; k++)
                 theta[i][k] = model.addVar(0.0, 1.0, 0.0, GRB_BINARY);
         }
 
@@ -365,15 +471,14 @@ int milp_solver_pynq::solve_milp_pynq(pfsRef to_sim) {
          name: Gamma
          type: binary
          func: Gamma[i][k] = 1 iff x_i + w_i >= x_k
-        表示槽 i 的右下角 x 坐标是否大于槽 k 的左下角 x 坐标。
         ***********************************************************************/
-        GRBVar2DArray Gamma(num_slots);
 
-        for (i = 0; i < num_slots; i++) {
+        GRBVar2DArray Gamma(num_slots);
+        for (i = 0; i < (uint)num_slots; i++) {
             GRBVarArray each_slot(num_slots);
 
             Gamma[i] = each_slot;
-            for (k = 0; k < num_slots; k++)
+            for (k = 0; k < (uint)num_slots; k++)
                 Gamma[i][k] = model.addVar(0.0, 1.0, 0.0, GRB_BINARY);
         }
 
@@ -381,15 +486,14 @@ int milp_solver_pynq::solve_milp_pynq(pfsRef to_sim) {
          name: Alpha
          type: binary
          func: Alpha[i][k] = 1 iff x_k + w_k >= x_i
-        表示槽 k 的右下角 x 坐标是否大于槽 i 的左下角 x 坐标
         ***********************************************************************/
 
         GRBVar2DArray Alpha(num_slots);
-        for (i = 0; i < num_slots; i++) {
+        for (i = 0; i < (uint)num_slots; i++) {
             GRBVarArray each_slot(num_slots);
             Alpha[i] = each_slot;
 
-            for (k = 0; k < num_slots; k++)
+            for (k = 0; k < (uint)num_slots; k++)
                 Alpha[i][k] = model.addVar(0.0, 1.0, 0.0, GRB_BINARY);
         }
 
@@ -397,15 +501,14 @@ int milp_solver_pynq::solve_milp_pynq(pfsRef to_sim) {
          name: Omega
          type: binary
          func: Omega[i][k] = 1 iff if y_i + h_i >= y_k
-        表示槽 i 的右上角 y 坐标是否大于槽 k 的左下角 y 坐标。
         ***********************************************************************/
 
         GRBVar2DArray Omega(num_slots);
-        for (i = 0; i < num_slots; i++) {
+        for (i = 0; i < (uint)num_slots; i++) {
             GRBVarArray each_slot(num_slots);
             Omega[i] = each_slot;
 
-            for (k = 0; k < num_slots; k++)
+            for (k = 0; k < (uint)num_slots; k++)
                 Omega[i][k] = model.addVar(0.0, 1.0, 0.0, GRB_BINARY);
         }
 
@@ -413,15 +516,14 @@ int milp_solver_pynq::solve_milp_pynq(pfsRef to_sim) {
          name: Psi
          type: binary
          func: Psi[i][k] = 1 iff  y_k + h_k >= y_i
-        表示槽 k 的右上角 y 坐标是否大于槽 i 的左下角 y 坐标。
         ***********************************************************************/
 
         GRBVar2DArray Psi(num_slots);
-        for (i = 0; i < num_slots; i++) {
+        for (i = 0; i < (uint)num_slots; i++) {
             GRBVarArray each_slot(num_slots);
             Psi[i] = each_slot;
 
-            for (k = 0; k < num_slots; k++)
+            for (k = 0; k < (uint)num_slots; k++)
                 Psi[i][k] = model.addVar(0.0, 1.0, 0.0, GRB_BINARY);
         }
 
@@ -429,7 +531,6 @@ int milp_solver_pynq::solve_milp_pynq(pfsRef to_sim) {
          name: delta
          type: binary
          func: delta[i][k] = 1 if slot 'i' and 'k' share at least one tile
-        表示槽 i 和槽 k 是否共享至少一个 tile
         ***********************************************************************/
 
         GRBVar3DArray delta(2);
@@ -437,11 +538,11 @@ int milp_solver_pynq::solve_milp_pynq(pfsRef to_sim) {
             GRBVar2DArray each_slot(delta_size);
 
             delta[j] = each_slot;
-            for (i = 0; i < delta_size; i++) {
+            for (i = 0; i < (uint)delta_size; i++) {
                 GRBVarArray each_slot_1(delta_size);
 
                 delta[j][i] = each_slot_1;
-                for (k = 0; k < delta_size; k++)
+                for (k = 0; k < (uint)delta_size; k++)
                     delta[j][i][k] = model.addVar(0.0, 1.0, 0.0, GRB_BINARY);
             }
         }
@@ -451,16 +552,16 @@ int milp_solver_pynq::solve_milp_pynq(pfsRef to_sim) {
          type: binary
          func: mu[i][k] = 1 iff bottom left x coordinate of slot 'i' is found
                to the left of the bottom left x coordinate of slot 'k'
-               mu[i][k] = 1 if x_i <= x_k
-        表示禁区 i 的左下角 x 坐标是否小于槽 k 的左下角 x 坐标
-        ***********************************************************************/
-        GRBVar2DArray mu(num_forbidden_slots);
 
-        for (i = 0; i < num_forbidden_slots; i++) {
+               mu[i][k] = 1 if x_i <= x_k
+        ***********************************************************************/
+
+        GRBVar2DArray mu(num_forbidden_slots);
+        for (i = 0; i < (uint)num_forbidden_slots; i++) {
             GRBVarArray each_slot(num_slots);
             mu[i] = each_slot;
 
-            for (k = 0; k < num_slots; k++)
+            for (k = 0; k < (uint)num_slots; k++)
                 mu[i][k] = model.addVar(0.0, 1.0, 0.0, GRB_BINARY);
         }
 
@@ -469,16 +570,15 @@ int milp_solver_pynq::solve_milp_pynq(pfsRef to_sim) {
          type: binary
          func: nu[i][k] = 1 iff bottom left x coordinate of slot 'i' is found
                to the left of the bottom left x coordinate of slot 'k'
+
                nu[i][k] = 1 if x_i <= x_k
-        表示禁区 i 的左下角 y 坐标是否小于槽 k 的左下角 y 坐标
         ***********************************************************************/
         GRBVar2DArray nu(num_forbidden_slots);
-
-        for (i = 0; i < num_forbidden_slots; i++) {
+        for (i = 0; i < (uint)num_forbidden_slots; i++) {
             GRBVarArray each_slot(num_slots);
             nu[i] = each_slot;
 
-            for (k = 0; k < num_slots; k++)
+            for (k = 0; k < (uint)num_slots; k++)
                 nu[i][k] = model.addVar(0.0, 1.0, 0.0, GRB_BINARY);
         }
 
@@ -487,15 +587,14 @@ int milp_solver_pynq::solve_milp_pynq(pfsRef to_sim) {
          type: binary
          func: fbdn_1[i][k] = 1 iff forbidden slot 'i' x variable interferes
                with slot 'k'
-        表示禁区 i 的右下角 x 坐标是否小于槽 k 的左下角 x 坐标
         ***********************************************************************/
-        GRBVar2DArray fbdn_1(num_forbidden_slots);
 
-        for (i = 0; i < num_forbidden_slots; i++) {
+        GRBVar2DArray fbdn_1(num_forbidden_slots);
+        for (i = 0; i < (uint)num_forbidden_slots; i++) {
             GRBVarArray each_slot(num_slots);
 
             fbdn_1[i] = each_slot;
-            for (k = 0; k < num_slots; k++)
+            for (k = 0; k < (uint)num_slots; k++)
                 fbdn_1[i][k] = model.addVar(0.0, 1.0, 0.0, GRB_BINARY);
         }
 
@@ -504,15 +603,14 @@ int milp_solver_pynq::solve_milp_pynq(pfsRef to_sim) {
          type: binary
          func: fbdn_2[i][k] = 1 iff forbidden slot 'i' x variable interferes
                with slot 'k'
-        表示禁区 i 的左下角 x 坐标是否小于槽 k 的右下角 x 坐标
         ***********************************************************************/
-        GRBVar2DArray fbdn_2(num_forbidden_slots);
 
-        for (i = 0; i < num_forbidden_slots; i++) {
+        GRBVar2DArray fbdn_2(num_forbidden_slots);
+        for (i = 0; i < (uint)num_forbidden_slots; i++) {
             GRBVarArray each_slot(num_slots);
 
             fbdn_2[i] = each_slot;
-            for (k = 0; k < num_slots; k++)
+            for (k = 0; k < (uint)num_slots; k++)
                 fbdn_2[i][k] = model.addVar(0.0, 1.0, 0.0, GRB_BINARY);
         }
 
@@ -521,15 +619,14 @@ int milp_solver_pynq::solve_milp_pynq(pfsRef to_sim) {
          type: binary
          func: fbdn_3[i][k] = 1 iff forbidden slot 'i' x variable interferes
                with slot 'k'
-        表示禁区 i 的右上角 y 坐标是否小于槽 k 的左下角 y 坐标
         ***********************************************************************/
-        GRBVar2DArray fbdn_3(num_forbidden_slots);
 
-        for (i = 0; i < num_forbidden_slots; i++) {
+        GRBVar2DArray fbdn_3(num_forbidden_slots);
+        for (i = 0; i < (uint)num_forbidden_slots; i++) {
             GRBVarArray each_slot(num_slots);
 
             fbdn_3[i] = each_slot;
-            for (k = 0; k < num_slots; k++)
+            for (k = 0; k < (uint)num_slots; k++)
                 fbdn_3[i][k] = model.addVar(0.0, 1.0, 0.0, GRB_BINARY);
         }
 
@@ -538,15 +635,13 @@ int milp_solver_pynq::solve_milp_pynq(pfsRef to_sim) {
          type: binary
          func: fbdn_4[i][k] = 1 iff forbidden slot 'i' x variable interferes
                with slot 'k'
-        表示禁区 i 的左下角 y 坐标是否小于槽 k 的右上角 y 坐标
         ***********************************************************************/
         GRBVar2DArray fbdn_4(num_forbidden_slots);
-
-        for (i = 0; i < num_forbidden_slots; i++) {
+        for (i = 0; i < (uint)num_forbidden_slots; i++) {
             GRBVarArray each_slot(num_slots);
 
             fbdn_4[i] = each_slot;
-            for (k = 0; k < num_slots; k++)
+            for (k = 0; k < (uint)num_slots; k++)
                 fbdn_4[i][k] = model.addVar(0.0, 1.0, 0.0, GRB_BINARY);
         }
 
@@ -556,11 +651,10 @@ int milp_solver_pynq::solve_milp_pynq(pfsRef to_sim) {
           func: centroid[i][k] represents the centroid of a slot i.
                 centroid[i]0] is the centroid on the x axis while
                 centroid [i][1] is the centroid on the y axis
-        表示每个槽的几何中心
          ***********************************************************************/
-        GRBVar2DArray centroid(num_slots);
 
-        for (i = 0; i < num_slots; i++) {
+        GRBVar2DArray centroid(num_slots);
+        for (i = 0; i < (uint)num_slots; i++) {
             GRBVarArray each_slot(2);
             centroid[i] = each_slot;
 
@@ -568,6 +662,7 @@ int milp_solver_pynq::solve_milp_pynq(pfsRef to_sim) {
                 centroid[i][k] =
                     model.addVar(0.0, GRB_INFINITY, 0.0, GRB_CONTINUOUS);
         }
+
         /**********************************************************************
           name: dist
           type: integer
@@ -575,14 +670,13 @@ int milp_solver_pynq::solve_milp_pynq(pfsRef to_sim) {
                 two regions. dist[i][k][0] represents the distance on the x axis
                 between slots i and slot k while dist[i][k][1] represents the
                 distance on the y axis between slots i and k.
-        表示槽 i 和槽 j 之间的距离
          ***********************************************************************/
         GRBVar3DArray dist(num_slots);
-        for (j = 0; j < num_slots; j++) {
+        for (j = 0; j < (uint)num_slots; j++) {
             GRBVar2DArray each_slot(num_slots);
 
             dist[j] = each_slot;
-            for (i = 0; i < num_slots; i++) {
+            for (i = 0; i < (uint)num_slots; i++) {
                 GRBVarArray each_slot_1(2);
 
                 dist[j][i] = each_slot_1;
@@ -599,11 +693,10 @@ int milp_solver_pynq::solve_milp_pynq(pfsRef to_sim) {
                 k = 0 => clb
                 k = 1 => bram
                 k = 2 => dsp
-         表示每个槽中浪费的资源数量
          ***********************************************************************/
 
         GRBVar2DArray wasted(num_slots);
-        for (i = 0; i < num_slots; i++) {
+        for (i = 0; i < (uint)num_slots; i++) {
             GRBVarArray each_slot(3);
             wasted[i] = each_slot;
 
@@ -617,10 +710,9 @@ int milp_solver_pynq::solve_milp_pynq(pfsRef to_sim) {
          func: this variable is used to formulate the constraint on wasted
         resources kappa[i][k] is a variable to constrain wasted resource type i
         in slot k
-        kappa[i][k][j]: 表示槽 i 是否跨越禁区边界 k 的第 j 个部分
         ***********************************************************************/
         GRBVar3DArray kappa(num_slots);
-        for (i = 0; i < num_slots; i++) {
+        for (i = 0; i < (uint)num_slots; i++) {
             GRBVar2DArray each_slot(num_fbdn_edge);
 
             kappa[i] = each_slot;
@@ -637,11 +729,184 @@ int milp_solver_pynq::solve_milp_pynq(pfsRef to_sim) {
         model.update();
 
         /********************************************************************
+         Constraint 0.1: Every HW-Task must be allocated somewhere
+       ***********************************************************************/
+
+        for (uint a = 0; a < t.maxHW_Tasks; a++) {
+            GRBLinExpr exp;
+
+            for (uint k = 0; k < t.maxPartitions; k++)
+                exp += A[a][k];
+
+            model.addConstr(exp == 1, "con 1");
+        }
+
+        /********************************************************************
+         Constraint 0.2: Decide wether a HW-task is subject to DPR
+        ***********************************************************************/
+
+        for (uint a = 0; a < t.maxHW_Tasks; a++)
+            for (uint b = 0; b < t.maxHW_Tasks; b++) {
+                if (a == b)
+                    continue;
+
+                for (uint k = 0; k < t.maxPartitions; k++)
+                    model.addConstr(gamma_part[a] >= A[b][k] - (1 - A[a][k]),
+                                    "con 2");
+            }
+        /********************************************************************
+         Constraint 0.3: Feasibility condition for the resources avaialable
+                         on the FPGA
+        ***********************************************************************/
+
+        for (uint x = 0; x < platform.N_FPGA_RESOURCES; x++) {
+            GRBLinExpr exp;
+
+            for (uint k = 0; k < t.maxPartitions; k++)
+                exp += b[x][k];
+
+            model.addConstr(exp <= (double)platform.maxFPGAResources[x],
+                            "con 3");
+        }
+
+        /********************************************************************
+         Constraint 0.4: Each slot must have enough resources to host all the
+                        HW-Tasks allocated to its corresponding partition
+        ***********************************************************************/
+
+        for (uint x = 0; x < platform.N_FPGA_RESOURCES; x++) {
+            for (uint k = 0; k < t.maxPartitions; k++) {
+                GRBLinExpr exp;
+                for (uint a = 0; a < t.maxHW_Tasks; a++) {
+                    model.addConstr(
+                        b[x][k] >= (double)t.HW_Tasks[a].resDemand[x] * A[a][k],
+                        "con 4");
+                    exp += A[a][k];
+                }
+                // model.addConstr(b[x][k] <= (double)BIG_M * exp, "con 11");
+            }
+        }
+
+        /********************************************************************
+        Constraint 0.5: Bound the FPGA reconfiguration time
+        ***********************************************************************/
+
+        double BIG_M_con5 = 1;
+        for (uint x = 0; x < platform.N_FPGA_RESOURCES; x++)
+            BIG_M_con5 +=
+                platform.recTimePerUnit[x] * platform.maxFPGAResources[x];
+        cout << BIG_M_con5 << endl;
+        for (uint a = 0; a < t.maxHW_Tasks; a++)
+            for (uint k = 0; k < t.maxPartitions; k++) {
+                GRBLinExpr exp;
+
+                for (uint x = 0; x < platform.N_FPGA_RESOURCES; x++)
+                    exp += (double)platform.recTimePerUnit[x] * b[x][k];
+
+                //                    model.addConstr(r[a] >= exp -(1.0 -
+                //                    A[a][k])*BIG_M_con5
+                //                                                -(1.0 -
+                //                                                gamma_part[a])*BIG_M_con5,
+                //                                                "con 6");
+            }
+        /********************************************************************
+        Constraint 0.6: Interference among HW-tasks due to execution
+          ***********************************************************************/
+
+        for (uint k = 0; k < t.maxPartitions; k++)
+            for (uint a = 0; a < t.maxHW_Tasks; a++)
+                for (uint b = 0; b < t.maxHW_Tasks; b++) {
+                    // Self-interference is impossible
+                    if (a == b)
+                        continue;
+
+                    const double WCET = (double)t.HW_Tasks[b].WCET;
+
+                    model.addConstr(I_SLOT[a][b] >= WCET -
+                                                        WCET * (1 - A[a][k]) -
+                                                        WCET * (1 - A[b][k]),
+                                    "con 7");
+                }
+
+        /********************************************************************
+         Constraint 0.7: Bound on delay incurred when requesting a HW-Task
+        ***********************************************************************/
+
+        double BIG_M_con7 = 1;
+        for (uint x = 0; x < platform.N_FPGA_RESOURCES; x++)
+            BIG_M_con7 +=
+                platform.recTimePerUnit[x] * platform.maxFPGAResources[x];
+        for (uint b = 0; b < t.maxHW_Tasks; b++)
+            BIG_M_con7 += t.HW_Tasks[b].WCET;
+
+        for (uint a = 0; a < t.maxHW_Tasks; a++) {
+            for (uint i = 0; i < t.maxSW_Tasks; i++) {
+                // Cannot receive interference from HW-tasks used by its SW-Task
+                if (t.HW_Tasks[a].SW_Task_ID == i)
+                    continue;
+
+                // For each HW-task used by the 'i'-th SW-task...
+                for (auto b : t.SW_Tasks[i].H)
+                    model.addConstr(DELTA[a][i] >=
+                                        I_SLOT[a][b] + r[b] -
+                                            (1 - gamma_part[a]) * BIG_M_con7,
+                                    "con 8");
+            }
+        }
+
+        /********************************************************************
+         Constraint 0.8: Enforce (delays <= given bound) to ensure
+        schedulability
+        ***********************************************************************/
+
+        for (uint i = 0; i < t.maxSW_Tasks; i++) {
+            GRBLinExpr exp;
+
+            // For each HW-task used by the 'i'-th SW-task...
+            for (auto a : t.SW_Tasks[i].H) {
+                exp += r[a] + t.HW_Tasks[a].WCET;
+
+                for (uint j = 0; j < t.maxSW_Tasks; j++) {
+                    if (i == j)
+                        continue;
+
+                    exp += DELTA[a][j];
+                }
+
+                if (!preemptive_FRI) {
+                    for (uint b = 0; b < t.maxHW_Tasks; b++)
+                        exp += DELTA_NP[a][b];
+                }
+            }
+
+            model.addConstr(exp <= slacks[i], "con 9");
+        }
+
+        /********************************************************************
+         Constraint 0.9: Bound delay due to non-preemptive reconfiguration
+        *********************************************************************/
+        /*
+                if(!preemptive_FRI)
+                {
+                    for(uint a=0; a < t.maxHW_Tasks; a++)
+                        for(uint b=0; b < t.maxHW_Tasks; b++)
+                            for(uint c=0; c < t.maxHW_Tasks; c++)
+                                for(uint k=0; k < t.maxPartitions; k++)
+                                    model.addConstr(DELTA_NP[a][b] >= r[c]
+                                                    -(2-A[a][k]-A[b][k])*BIG_M_con5
+                                                    -A[c][k]*BIG_M_con5
+           -(1-gamma_part[a])*BIG_M_con5
+                                                    -(1-gamma_part[c])*BIG_M_con5,
+           "con 10");
+                }
+
+        */
+
+        /********************************************************************
         Constr 1.1: The x coordinates must be constrained not to exceed
                       the boundaries of the fabric
-        约束1.1：x坐标必须受到约束，不得超过边界。
         ********************************************************************/
-        for (i = 0; i < num_slots; i++) {
+        for (i = 0; i < (uint)num_slots; i++) {
             model.addConstr(w[i] == x[i][1] - x[i][0], "1");
             model.addConstr(x[i][1] - x[i][0] >= 1, "4");
         }
@@ -651,8 +916,8 @@ int milp_solver_pynq::solve_milp_pynq(pfsRef to_sim) {
                     contigious i.e, if a region occupies clock region 1 and 3
                     then it must also occupy region 2
         ********************************************************************/
-        for (i = 0; i < num_slots; i++) {
-            for (j = 0; j < num_clk_regs - 2; j++) {
+        for (i = 0; i < (uint)num_slots; i++) {
+            for (j = 0; j < (uint)num_clk_regs - 2; j++) {
                 if (num_clk_regs > 2)
                     model.addConstr(
                         beta[i][j + 1] >= beta[i][j] + beta[i][j + 2] - 1, "5");
@@ -661,22 +926,21 @@ int milp_solver_pynq::solve_milp_pynq(pfsRef to_sim) {
         /************************************************************************
         Constr 1.3: The height of slot 'i' must be the sum of all clbs in the
         slot
-        slot i的高度必须是slot内的所有clb的和
         *************************************************************************/
-        for (i = 0; i < num_slots; i++) {
+        for (i = 0; i < (uint)num_slots; i++) {
             GRBLinExpr exp;
-            for (j = 0; j < num_clk_regs; j++)
+            for (j = 0; j < (uint)num_clk_regs; j++)
                 exp += beta[i][j];
             model.addConstr(h[i] == exp, "6");
         }
+
         /******************************************************************
         Constr 1.4: y_i must be constrained not to be greater than the
                     lowest row
-        y_i必须被限制，不能大于底下的行
         ******************************************************************/
-        for (i = 0; i < num_slots; i++) {
+        for (i = 0; i < (uint)num_slots; i++) {
             GRBLinExpr exp_y;
-            for (j = 0; j < num_clk_regs; j++)
+            for (j = 0; j < (uint)num_clk_regs; j++)
                 model.addConstr(y[i] <= (H - beta[i][j] * (H - j)), "99");
             model.addConstr(y[i] + h[i] <= H, "100");
         }
@@ -685,7 +949,7 @@ int milp_solver_pynq::solve_milp_pynq(pfsRef to_sim) {
         /******************************************************************
         Constr 2.0: The clb on the FPGA is described using the following
                     piecewise function.
-                           x       0  <= x < 5
+                    x       0  <= x < 5
                     x-1     4  <= x < 8
                     x-2     7  <= x < 13
                     x-3     10 <= x < 16
@@ -699,9 +963,8 @@ int milp_solver_pynq::solve_milp_pynq(pfsRef to_sim) {
                     x-11    25 <= x < W
                     The piecewise function is then transformed into a set
                     of MILP constraints using the intermediate variable z
-        Constr 2.0：在FPGA上，CLB（可配置逻辑块）是使用以下分段函数描述的。
         ******************************************************************/
-        for (i = 0; i < num_slots; i++) {
+        for (i = 0; i < (uint)num_slots; i++) {
             for (k = 0; k < 2; k++) {
                 l = 0;
                 GRBLinExpr exp;
@@ -732,134 +995,135 @@ int milp_solver_pynq::solve_milp_pynq(pfsRef to_sim) {
 
                 for (m = 0; m < l; m++)
                     exp += z[0][i][k][m];
+
                 model.addConstr(exp <= (l + 1) / 2);
             }
         }
 
         // constr for clbs
-        for (i = 0; i < num_slots; i++) {
+        for (i = 0; i < (uint)num_slots; i++) {
             for (k = 0; k < 2; k++) {
                 l = 0;
                 model.addConstr(
-                    clb[i][k] >= x[i][k] - BIG_M * (1 - z[0][i][k][l++]), "8");
-
-                model.addConstr(clb[i][k] >= (x[i][k] - 1) -
-                                                 BIG_M * (1 - z[0][i][k][l++]) -
-                                                 BIG_M * (1 - z[0][i][k][l++]),
-                                "9");
-
-                model.addConstr(clb[i][k] >= (x[i][k] - 2) -
-                                                 BIG_M * (1 - z[0][i][k][l++]) -
-                                                 BIG_M * (1 - z[0][i][k][l++]),
-                                "10");
-
-                model.addConstr(clb[i][k] >= (x[i][k] - 3) -
-                                                 BIG_M * (1 - z[0][i][k][l++]) -
-                                                 BIG_M * (1 - z[0][i][k][l++]),
-                                "11");
-
-                model.addConstr(clb[i][k] >= (x[i][k] - 4) -
-                                                 BIG_M * (1 - z[0][i][k][l++]) -
-                                                 BIG_M * (1 - z[0][i][k][l++]),
-                                "12");
-
-                model.addConstr(clb[i][k] >= (x[i][k] - 5) -
-                                                 BIG_M * (1 - z[0][i][k][l++]) -
-                                                 BIG_M * (1 - z[0][i][k][l++]),
-                                "13");
-
-                model.addConstr(clb[i][k] >= (x[i][k] - 6) -
-                                                 BIG_M * (1 - z[0][i][k][l++]) -
-                                                 BIG_M * (1 - z[0][i][k][l++]),
-                                "14");
-
-                model.addConstr(clb[i][k] >= (x[i][k] - 7) -
-                                                 BIG_M * (1 - z[0][i][k][l++]) -
-                                                 BIG_M * (1 - z[0][i][k][l++]),
-                                "15");
-
-                model.addConstr(clb[i][k] >= (x[i][k] - 8) -
-                                                 BIG_M * (1 - z[0][i][k][l++]) -
-                                                 BIG_M * (1 - z[0][i][k][l++]),
-                                "12");
-
-                model.addConstr(clb[i][k] >= (x[i][k] - 9) -
-                                                 BIG_M * (1 - z[0][i][k][l++]) -
-                                                 BIG_M * (1 - z[0][i][k][l++]),
-                                "13");
-
-                model.addConstr(clb[i][k] >= (x[i][k] - 10) -
-                                                 BIG_M * (1 - z[0][i][k][l++]) -
-                                                 BIG_M * (1 - z[0][i][k][l++]),
-                                "14");
-
-                model.addConstr(clb[i][k] >= (x[i][k] - 11) -
-                                                 BIG_M * (1 - z[0][i][k][l++]) -
-                                                 BIG_M * (1 - z[0][i][k][l++]),
-                                "15");
+                    clb[i][k] >= x[i][k] - BIG_M * (1 - z[0][i][k][l]), "8");
+                l++;
+                model.addConstr(
+                    clb[i][k] >= (x[i][k] - 1) - BIG_M * (1 - z[0][i][k][l]) -
+                                     BIG_M * (1 - z[0][i][k][l + 1]),
+                    "9");
+                l += 2;
+                model.addConstr(
+                    clb[i][k] >= (x[i][k] - 2) - BIG_M * (1 - z[0][i][k][l]) -
+                                     BIG_M * (1 - z[0][i][k][l + 1]),
+                    "10");
+                l += 2;
+                model.addConstr(
+                    clb[i][k] >= (x[i][k] - 3) - BIG_M * (1 - z[0][i][k][l]) -
+                                     BIG_M * (1 - z[0][i][k][l + 1]),
+                    "11");
+                l += 2;
+                model.addConstr(
+                    clb[i][k] >= (x[i][k] - 4) - BIG_M * (1 - z[0][i][k][l]) -
+                                     BIG_M * (1 - z[0][i][k][l + 1]),
+                    "12");
+                l += 2;
+                model.addConstr(
+                    clb[i][k] >= (x[i][k] - 5) - BIG_M * (1 - z[0][i][k][l]) -
+                                     BIG_M * (1 - z[0][i][k][l + 1]),
+                    "13");
+                l += 2;
+                model.addConstr(
+                    clb[i][k] >= (x[i][k] - 6) - BIG_M * (1 - z[0][i][k][l]) -
+                                     BIG_M * (1 - z[0][i][k][l + 1]),
+                    "14");
+                l += 2;
+                model.addConstr(
+                    clb[i][k] >= (x[i][k] - 7) - BIG_M * (1 - z[0][i][k][l]) -
+                                     BIG_M * (1 - z[0][i][k][l + 1]),
+                    "15");
+                l += 2;
+                model.addConstr(
+                    clb[i][k] >= (x[i][k] - 8) - BIG_M * (1 - z[0][i][k][l]) -
+                                     BIG_M * (1 - z[0][i][k][l + 1]),
+                    "12");
+                l += 2;
+                model.addConstr(
+                    clb[i][k] >= (x[i][k] - 9) - BIG_M * (1 - z[0][i][k][l]) -
+                                     BIG_M * (1 - z[0][i][k][l + 1]),
+                    "13");
+                l += 2;
+                model.addConstr(
+                    clb[i][k] >= (x[i][k] - 10) - BIG_M * (1 - z[0][i][k][l]) -
+                                     BIG_M * (1 - z[0][i][k][l + 1]),
+                    "14");
+                l += 2;
+                model.addConstr(
+                    clb[i][k] >= (x[i][k] - 11) - BIG_M * (1 - z[0][i][k][l]) -
+                                     BIG_M * (1 - z[0][i][k][l + 1]),
+                    "15");
+                l += 2;
             }
 
             for (k = 0; k < 2; k++) {
                 l = 0;
                 model.addConstr(
-                    x[i][k] >= clb[i][k] - BIG_M * (1 - z[0][i][k][l++]), "16");
-
-                model.addConstr(
-                    x[i][k] - 1 >= (clb[i][k]) - BIG_M * (1 - z[0][i][k][l++]) -
-                                       BIG_M * (1 - z[0][i][k][l++]),
-                    "17");
-
-                model.addConstr(
-                    x[i][k] - 2 >= (clb[i][k]) - BIG_M * (1 - z[0][i][k][l++]) -
-                                       BIG_M * (1 - z[0][i][k][l++]),
-                    "18");
-
-                model.addConstr(
-                    x[i][k] - 3 >= (clb[i][k]) - BIG_M * (1 - z[0][i][k][l++]) -
-                                       BIG_M * (1 - z[0][i][k][l++]),
-                    "19");
-
-                model.addConstr(
-                    x[i][k] - 4 >= (clb[i][k]) - BIG_M * (1 - z[0][i][k][l++]) -
-                                       BIG_M * (1 - z[0][i][k][l++]),
-                    "20");
-
-                model.addConstr(
-                    x[i][k] - 5 >= (clb[i][k]) - BIG_M * (1 - z[0][i][k][l++]) -
-                                       BIG_M * (1 - z[0][i][k][l++]),
-                    "21");
-
-                model.addConstr(
-                    x[i][k] - 6 >= (clb[i][k]) - BIG_M * (1 - z[0][i][k][l++]) -
-                                       BIG_M * (1 - z[0][i][k][l++]),
-                    "22");
-
-                model.addConstr(
-                    x[i][k] - 7 >= (clb[i][k]) - BIG_M * (1 - z[0][i][k][l++]) -
-                                       BIG_M * (1 - z[0][i][k][l++]),
-                    "23");
-
-                model.addConstr(
-                    x[i][k] - 8 >= (clb[i][k]) - BIG_M * (1 - z[0][i][k][l++]) -
-                                       BIG_M * (1 - z[0][i][k][l++]),
-                    "20");
-
-                model.addConstr(
-                    x[i][k] - 9 >= (clb[i][k]) - BIG_M * (1 - z[0][i][k][l++]) -
-                                       BIG_M * (1 - z[0][i][k][l++]),
-                    "21");
-
-                model.addConstr(x[i][k] - 10 >=
-                                    (clb[i][k]) -
-                                        BIG_M * (1 - z[0][i][k][l++]) -
-                                        BIG_M * (1 - z[0][i][k][l++]),
+                    x[i][k] >= clb[i][k] - BIG_M * (1 - z[0][i][k][l]), "16");
+                l++;
+                model.addConstr(x[i][k] - 1 >=
+                                    (clb[i][k]) - BIG_M * (1 - z[0][i][k][l]) -
+                                        BIG_M * (1 - z[0][i][k][l + 1]),
+                                "17");
+                l += 2;
+                model.addConstr(x[i][k] - 2 >=
+                                    (clb[i][k]) - BIG_M * (1 - z[0][i][k][l]) -
+                                        BIG_M * (1 - z[0][i][k][l + 1]),
+                                "18");
+                l += 2;
+                model.addConstr(x[i][k] - 3 >=
+                                    (clb[i][k]) - BIG_M * (1 - z[0][i][k][l]) -
+                                        BIG_M * (1 - z[0][i][k][l + 1]),
+                                "19");
+                l += 2;
+                model.addConstr(x[i][k] - 4 >=
+                                    (clb[i][k]) - BIG_M * (1 - z[0][i][k][l]) -
+                                        BIG_M * (1 - z[0][i][k][l + 1]),
+                                "20");
+                l += 2;
+                model.addConstr(x[i][k] - 5 >=
+                                    (clb[i][k]) - BIG_M * (1 - z[0][i][k][l]) -
+                                        BIG_M * (1 - z[0][i][k][l + 1]),
+                                "21");
+                l += 2;
+                model.addConstr(x[i][k] - 6 >=
+                                    (clb[i][k]) - BIG_M * (1 - z[0][i][k][l]) -
+                                        BIG_M * (1 - z[0][i][k][l + 1]),
                                 "22");
-
-                model.addConstr(x[i][k] - 11 >=
-                                    (clb[i][k]) -
-                                        BIG_M * (1 - z[0][i][k][l++]) -
-                                        BIG_M * (1 - z[0][i][k][l++]),
+                l += 2;
+                model.addConstr(x[i][k] - 7 >=
+                                    (clb[i][k]) - BIG_M * (1 - z[0][i][k][l]) -
+                                        BIG_M * (1 - z[0][i][k][l + 1]),
                                 "23");
+                l += 2;
+                model.addConstr(x[i][k] - 8 >=
+                                    (clb[i][k]) - BIG_M * (1 - z[0][i][k][l]) -
+                                        BIG_M * (1 - z[0][i][k][l + 1]),
+                                "20");
+                l += 2;
+                model.addConstr(x[i][k] - 9 >=
+                                    (clb[i][k]) - BIG_M * (1 - z[0][i][k][l]) -
+                                        BIG_M * (1 - z[0][i][k][l + 1]),
+                                "21");
+                l += 2;
+                model.addConstr(x[i][k] - 10 >=
+                                    (clb[i][k]) - BIG_M * (1 - z[0][i][k][l]) -
+                                        BIG_M * (1 - z[0][i][k][l + 1]),
+                                "22");
+                l += 2;
+                model.addConstr(x[i][k] - 11 >=
+                                    (clb[i][k]) - BIG_M * (1 - z[0][i][k][l]) -
+                                        BIG_M * (1 - z[0][i][k][l + 1]),
+                                "23");
+                l += 2;
             }
         }
 
@@ -875,7 +1139,7 @@ int milp_solver_pynq::solve_milp_pynq(pfsRef to_sim) {
                    The piecewise function is then transformed into a set
                     of MILP constraints using the intermediate variable z
         ******************************************************************/
-        for (i = 0; i < num_slots; i++) {
+        for (i = 0; i < (uint)num_slots; i++) {
             for (k = 0; k < 2; k++) {
                 l = 0;
                 // FBDN region one
@@ -912,7 +1176,7 @@ int milp_solver_pynq::solve_milp_pynq(pfsRef to_sim) {
             }
         }
         // constr for clbs
-        for (i = 0; i < num_slots; i++) {
+        for (i = 0; i < (uint)num_slots; i++) {
             for (k = 0; k < 2; k++) {
                 l = 0;
 
@@ -923,27 +1187,32 @@ int milp_solver_pynq::solve_milp_pynq(pfsRef to_sim) {
 
                 model.addConstr(clb_fbdn[0][i][k] >=
                                     (x[i][k] - 1) -
-                                        BIG_M * (1 - z[3][i][k][l++]) -
-                                        BIG_M * (1 - z[3][i][k][l++]),
+                                        BIG_M * (1 - z[3][i][k][l]) -
+                                        BIG_M * (1 - z[3][i][k][l + 1]),
                                 "9");
+                l += 2;
 
                 model.addConstr(clb_fbdn[0][i][k] >=
                                     (x[i][k] - 2) -
-                                        BIG_M * (1 - z[3][i][k][l++]) -
-                                        BIG_M * (1 - z[3][i][k][l++]),
+                                        BIG_M * (1 - z[3][i][k][l]) -
+                                        BIG_M * (1 - z[3][i][k][l + 1]),
                                 "10");
 
+                l += 2;
                 model.addConstr(clb_fbdn[0][i][k] >=
                                     (x[i][k] - 3) -
-                                        BIG_M * (1 - z[3][i][k][l++]) -
-                                        BIG_M * (1 - z[3][i][k][l++]),
+                                        BIG_M * (1 - z[3][i][k][l]) -
+                                        BIG_M * (1 - z[3][i][k][l + 1]),
                                 "11");
 
+                l += 2;
                 model.addConstr(clb_fbdn[0][i][k] >=
-                                    13 - BIG_M * (1 - z[3][i][k][l++]) -
-                                        BIG_M * (1 - z[3][i][k][l++]),
+                                    (fs_pynq[0].x + fs_pynq[0].w - 4) -
+                                        BIG_M * (1 - z[3][i][k][l]) -
+                                        BIG_M * (1 - z[3][i][k][l + 1]),
                                 "12");
 
+                l += 2;
                 // FBDN region two
                 model.addConstr(clb_fbdn[1][i][k] >=
                                     35 - BIG_M * (1 - z[3][i][k][l++]),
@@ -951,16 +1220,16 @@ int milp_solver_pynq::solve_milp_pynq(pfsRef to_sim) {
 
                 model.addConstr(clb_fbdn[1][i][k] >=
                                     (x[i][k] - 7) -
-                                        BIG_M * (1 - z[3][i][k][l++]) -
-                                        BIG_M * (1 - z[3][i][k][l++]),
+                                        BIG_M * (1 - z[3][i][k][l]) -
+                                        BIG_M * (1 - z[3][i][k][l + 1]),
                                 "9");
+                l += 2;
 
                 model.addConstr(
                     clb_fbdn[1][i][k] >=
-                        41 -
-                            BIG_M * (1 - z[3][i][k][l++]) - // fs_pynq[1].x +
-                                                            // fs_pynq[1]. w - 7
-                            BIG_M * (1 - z[3][i][k][l++]),
+                        41 - BIG_M * (1 - z[3][i][k][l]) - // fs_pynq[1].x +
+                                                           // fs_pynq[1]. w - 7
+                            BIG_M * (1 - z[3][i][k][l + 1]),
                     "10");
             }
 
@@ -974,27 +1243,30 @@ int milp_solver_pynq::solve_milp_pynq(pfsRef to_sim) {
 
                 model.addConstr(x[i][k] - 1 >=
                                     (clb_fbdn[0][i][k]) -
-                                        BIG_M * (1 - z[3][i][k][l++]) -
-                                        BIG_M * (1 - z[3][i][k][l++]),
+                                        BIG_M * (1 - z[3][i][k][l]) -
+                                        BIG_M * (1 - z[3][i][k][l + 1]),
                                 "17");
+                l += 2;
 
                 model.addConstr(x[i][k] - 2 >=
                                     (clb_fbdn[0][i][k]) -
-                                        BIG_M * (1 - z[3][i][k][l++]) -
-                                        BIG_M * (1 - z[3][i][k][l++]),
+                                        BIG_M * (1 - z[3][i][k][l]) -
+                                        BIG_M * (1 - z[3][i][k][l + 1]),
                                 "18");
+                l += 2;
 
                 model.addConstr(x[i][k] - 3 >=
                                     (clb_fbdn[0][i][k]) -
-                                        BIG_M * (1 - z[3][i][k][l++]) -
-                                        BIG_M * (1 - z[3][i][k][l++]),
+                                        BIG_M * (1 - z[3][i][k][l]) -
+                                        BIG_M * (1 - z[3][i][k][l + 1]),
                                 "19");
-
-                model.addConstr(13 >= (clb_fbdn[0][i][k]) -
-                                          BIG_M * (1 - z[3][i][k][l++]) -
-                                          BIG_M * (1 - z[3][i][k][l++]),
+                l += 2;
+                model.addConstr(fs_pynq[i].x + fs_pynq[i].w - 4 >=
+                                    (clb_fbdn[0][i][k]) -
+                                        BIG_M * (1 - z[3][i][k][l]) -
+                                        BIG_M * (1 - z[3][i][k][l + 1]),
                                 "20");
-
+                l += 2;
                 // FBDN region two
                 model.addConstr(35 >= clb_fbdn[1][i][k] -
                                           BIG_M * (1 - z[3][i][k][l++]),
@@ -1002,16 +1274,15 @@ int milp_solver_pynq::solve_milp_pynq(pfsRef to_sim) {
 
                 model.addConstr((x[i][k] - 7) >=
                                     clb_fbdn[1][i][k] -
-                                        BIG_M * (1 - z[3][i][k][l++]) -
-                                        BIG_M * (1 - z[3][i][k][l++]),
+                                        BIG_M * (1 - z[3][i][k][l]) -
+                                        BIG_M * (1 - z[3][i][k][l + 1]),
                                 "9");
-
+                l += 2;
                 model.addConstr(
-                    41 >=
-                        clb_fbdn[1][i][k] -
-                            BIG_M * (1 - z[3][i][k][l++]) - // fs_pynq[1].x +
+                    41 >= clb_fbdn[1][i][k] -
+                              BIG_M * (1 - z[3][i][k][l]) - // fs_pynq[1].x +
                                                             // fs_pynq[1]. w - 7
-                            BIG_M * (1 - z[3][i][k][l++]),
+                              BIG_M * (1 - z[3][i][k][l + 1]),
                     "10");
             }
         }
@@ -1028,7 +1299,7 @@ int milp_solver_pynq::solve_milp_pynq(pfsRef to_sim) {
                     5     18 <=  x  < 66
                     6     25 <=  x  < W
         ******************************************************************/
-        for (i = 0; i < num_slots; i++) {
+        for (i = 0; i < (uint)num_slots; i++) {
             for (k = 0; k < 2; k++) {
                 l = 0;
                 GRBLinExpr exp;
@@ -1054,41 +1325,47 @@ int milp_solver_pynq::solve_milp_pynq(pfsRef to_sim) {
             }
         }
 
-        for (i = 0; i < num_slots; i++) {
+        for (i = 0; i < (uint)num_slots; i++) {
             for (k = 0; k < 2; k++) {
                 l = 0;
                 model.addConstr(bram[i][k] >= 0 - BIG_M * (1 - z[1][i][k][l++]),
                                 "39");
 
                 model.addConstr(bram[i][k] >=
-                                    1 - BIG_M * (1 - z[1][i][k][l++]) -
-                                        BIG_M * (1 - z[1][i][k][l++]),
+                                    1 - BIG_M * (1 - z[1][i][k][l]) -
+                                        BIG_M * (1 - z[1][i][k][l + 1]),
                                 "40");
+                l += 2;
 
                 model.addConstr(bram[i][k] >=
-                                    2 - BIG_M * (1 - z[1][i][k][l++]) -
-                                        BIG_M * (1 - z[1][i][k][l++]),
+                                    2 - BIG_M * (1 - z[1][i][k][l]) -
+                                        BIG_M * (1 - z[1][i][k][l + 1]),
                                 "41");
+                l += 2;
 
                 model.addConstr(bram[i][k] >=
-                                    3 - BIG_M * (1 - z[1][i][k][l++]) -
-                                        BIG_M * (1 - z[1][i][k][l++]),
+                                    3 - BIG_M * (1 - z[1][i][k][l]) -
+                                        BIG_M * (1 - z[1][i][k][l + 1]),
                                 "42");
+                l += 2;
 
                 model.addConstr(bram[i][k] >=
-                                    4 - BIG_M * (1 - z[1][i][k][l++]) -
-                                        BIG_M * (1 - z[1][i][k][l++]),
+                                    4 - BIG_M * (1 - z[1][i][k][l]) -
+                                        BIG_M * (1 - z[1][i][k][l + 1]),
                                 "41");
+                l += 2;
 
                 model.addConstr(bram[i][k] >=
-                                    5 - BIG_M * (1 - z[1][i][k][l++]) -
-                                        BIG_M * (1 - z[1][i][k][l++]),
+                                    5 - BIG_M * (1 - z[1][i][k][l]) -
+                                        BIG_M * (1 - z[1][i][k][l + 1]),
                                 "42");
+                l += 2;
 
                 model.addConstr(bram[i][k] >=
-                                    6 - BIG_M * (1 - z[1][i][k][l++]) -
-                                        BIG_M * (1 - z[1][i][k][l++]),
+                                    6 - BIG_M * (1 - z[1][i][k][l]) -
+                                        BIG_M * (1 - z[1][i][k][l + 1]),
                                 "42");
+                l += 2;
             }
 
             for (k = 0; k < 2; k++) {
@@ -1097,33 +1374,37 @@ int milp_solver_pynq::solve_milp_pynq(pfsRef to_sim) {
                                 "43");
 
                 model.addConstr(1 >= (bram[i][k]) -
-                                         BIG_M * (1 - z[1][i][k][l++]) -
-                                         BIG_M * (1 - z[1][i][k][l++]),
+                                         BIG_M * (1 - z[1][i][k][l]) -
+                                         BIG_M * (1 - z[1][i][k][l + 1]),
                                 "44");
-
+                l += 2;
                 model.addConstr(2 >= (bram[i][k]) -
-                                         BIG_M * (1 - z[1][i][k][l++]) -
-                                         BIG_M * (1 - z[1][i][k][l++]),
+                                         BIG_M * (1 - z[1][i][k][l]) -
+                                         BIG_M * (1 - z[1][i][k][l + 1]),
                                 "45");
+                l += 2;
 
                 model.addConstr(3 >= (bram[i][k]) -
-                                         BIG_M * (1 - z[1][i][k][l++]) -
-                                         BIG_M * (1 - z[1][i][k][l++]),
+                                         BIG_M * (1 - z[1][i][k][l]) -
+                                         BIG_M * (1 - z[1][i][k][l + 1]),
                                 "46");
+                l += 2;
 
                 model.addConstr(4 >= (bram[i][k]) -
-                                         BIG_M * (1 - z[1][i][k][l++]) -
-                                         BIG_M * (1 - z[1][i][k][l++]),
+                                         BIG_M * (1 - z[1][i][k][l]) -
+                                         BIG_M * (1 - z[1][i][k][l + 1]),
                                 "44");
+                l += 2;
 
                 model.addConstr(5 >= (bram[i][k]) -
-                                         BIG_M * (1 - z[1][i][k][l++]) -
-                                         BIG_M * (1 - z[1][i][k][l++]),
+                                         BIG_M * (1 - z[1][i][k][l]) -
+                                         BIG_M * (1 - z[1][i][k][l + 1]),
                                 "45");
+                l += 2;
 
                 model.addConstr(6 >= (bram[i][k]) -
-                                         BIG_M * (1 - z[1][i][k][l++]) -
-                                         BIG_M * (1 - z[1][i][k][l++]),
+                                         BIG_M * (1 - z[1][i][k][l]) -
+                                         BIG_M * (1 - z[1][i][k][l + 1]),
                                 "46");
             }
         }
@@ -1136,7 +1417,7 @@ int milp_solver_pynq::solve_milp_pynq(pfsRef to_sim) {
                     1     5  <=  x  < 16
                     2     16  <=  x  < 17
         ******************************************************************/
-        for (i = 0; i < num_slots; i++) {
+        for (i = 0; i < (uint)num_slots; i++) {
             for (k = 0; k < 2; k++) {
                 l = 0;
                 GRBLinExpr exp;
@@ -1154,7 +1435,7 @@ int milp_solver_pynq::solve_milp_pynq(pfsRef to_sim) {
             }
         }
 
-        for (i = 0; i < num_slots; i++) {
+        for (i = 0; i < (uint)num_slots; i++) {
             for (k = 0; k < 2; k++) {
                 l = 0;
                 model.addConstr(bram_fbdn[0][i][k] >=
@@ -1162,14 +1443,15 @@ int milp_solver_pynq::solve_milp_pynq(pfsRef to_sim) {
                                 "39");
 
                 model.addConstr(bram_fbdn[0][i][k] >=
-                                    1 - BIG_M * (1 - z[4][i][k][l++]) -
-                                        BIG_M * (1 - z[4][i][k][l++]),
+                                    1 - BIG_M * (1 - z[4][i][k][l]) -
+                                        BIG_M * (1 - z[4][i][k][l + 1]),
                                 "40");
-
+                l += 2;
                 model.addConstr(bram_fbdn[0][i][k] >=
-                                    2 - BIG_M * (1 - z[4][i][k][l++]) -
-                                        BIG_M * (1 - z[4][i][k][l++]),
+                                    2 - BIG_M * (1 - z[4][i][k][l]) -
+                                        BIG_M * (1 - z[4][i][k][l + 1]),
                                 "41");
+                l += 2;
             }
 
             for (k = 0; k < 2; k++) {
@@ -1179,14 +1461,16 @@ int milp_solver_pynq::solve_milp_pynq(pfsRef to_sim) {
                                 "43");
 
                 model.addConstr(1 >= (bram_fbdn[0][i][k]) -
-                                         BIG_M * (1 - z[4][i][k][l++]) -
-                                         BIG_M * (1 - z[4][i][k][l++]),
+                                         BIG_M * (1 - z[4][i][k][l]) -
+                                         BIG_M * (1 - z[4][i][k][l + 1]),
                                 "44");
+                l += 2;
 
                 model.addConstr(2 >= (bram_fbdn[0][i][k]) -
-                                         BIG_M * (1 - z[4][i][k][l++]) -
-                                         BIG_M * (1 - z[4][i][k][l++]),
+                                         BIG_M * (1 - z[4][i][k][l]) -
+                                         BIG_M * (1 - z[4][i][k][l + 1]),
                                 "45");
+                l += 2;
             }
         }
 
@@ -1199,7 +1483,7 @@ int milp_solver_pynq::solve_milp_pynq(pfsRef to_sim) {
                     4     0  <=  x  < 63
                     5     22 <=  x  < W
         ******************************************************************/
-        for (i = 0; i < num_slots; i++) {
+        for (i = 0; i < (uint)num_slots; i++) {
             for (k = 0; k < 2; k++) {
                 l = 0;
                 GRBLinExpr exp;
@@ -1223,36 +1507,35 @@ int milp_solver_pynq::solve_milp_pynq(pfsRef to_sim) {
             }
         }
 
-        for (i = 0; i < num_slots; i++) {
+        for (i = 0; i < (uint)num_slots; i++) {
             for (k = 0; k < 2; k++) {
                 l = 0;
                 model.addConstr(
                     dsp[i][k] >= (0 - BIG_M * (1 - z[2][i][k][l++])), "52");
 
-                model.addConstr(dsp[i][k] >=
-                                    (1 - BIG_M * (1 - z[2][i][k][l++]) -
-                                     BIG_M * (1 - z[2][i][k][l++])),
+                model.addConstr(dsp[i][k] >= (1 - BIG_M * (1 - z[2][i][k][l]) -
+                                              BIG_M * (1 - z[2][i][k][l + 1])),
                                 "53");
-
-                model.addConstr(dsp[i][k] >=
-                                    (2 - BIG_M * (1 - z[2][i][k][l++]) -
-                                     BIG_M * (1 - z[2][i][k][l++])),
+                l += 2;
+                model.addConstr(dsp[i][k] >= (2 - BIG_M * (1 - z[2][i][k][l]) -
+                                              BIG_M * (1 - z[2][i][k][l + 1])),
                                 "54");
+                l += 2;
 
-                model.addConstr(dsp[i][k] >=
-                                    (3 - BIG_M * (1 - z[2][i][k][l++]) -
-                                     BIG_M * (1 - z[2][i][k][l++])),
+                model.addConstr(dsp[i][k] >= (3 - BIG_M * (1 - z[2][i][k][l]) -
+                                              BIG_M * (1 - z[2][i][k][l + 1])),
                                 "53");
+                l += 2;
 
-                model.addConstr(dsp[i][k] >=
-                                    (4 - BIG_M * (1 - z[2][i][k][l++]) -
-                                     BIG_M * (1 - z[2][i][k][l++])),
+                model.addConstr(dsp[i][k] >= (4 - BIG_M * (1 - z[2][i][k][l]) -
+                                              BIG_M * (1 - z[2][i][k][l + 1])),
                                 "54");
+                l += 2;
 
-                model.addConstr(dsp[i][k] >=
-                                    (5 - BIG_M * (1 - z[2][i][k][l++]) -
-                                     BIG_M * (1 - z[2][i][k][l++])),
+                model.addConstr(dsp[i][k] >= (5 - BIG_M * (1 - z[2][i][k][l]) -
+                                              BIG_M * (1 - z[2][i][k][l + 1])),
                                 "53");
+                l += 2;
             }
 
             for (k = 0; k < 2; k++) {
@@ -1260,27 +1543,26 @@ int milp_solver_pynq::solve_milp_pynq(pfsRef to_sim) {
                 model.addConstr(0 >= dsp[i][k] - BIG_M * (1 - z[2][i][k][l++]),
                                 "55");
 
-                model.addConstr(1 >= (dsp[i][k]) -
-                                         BIG_M * (1 - z[2][i][k][l++]) -
-                                         BIG_M * (1 - z[2][i][k][l++]),
+                model.addConstr(1 >= (dsp[i][k]) - BIG_M * (1 - z[2][i][k][l]) -
+                                         BIG_M * (1 - z[2][i][k][l + 1]),
                                 "56");
+                l += 2;
 
-                model.addConstr(2 >= (dsp[i][k]) -
-                                         BIG_M * (1 - z[2][i][k][l++]) -
-                                         BIG_M * (1 - z[2][i][k][l++]),
+                model.addConstr(2 >= (dsp[i][k]) - BIG_M * (1 - z[2][i][k][l]) -
+                                         BIG_M * (1 - z[2][i][k][l + 1]),
                                 "57");
-                model.addConstr(3 >= (dsp[i][k]) -
-                                         BIG_M * (1 - z[2][i][k][l++]) -
-                                         BIG_M * (1 - z[2][i][k][l++]),
+                l += 2;
+                model.addConstr(3 >= (dsp[i][k]) - BIG_M * (1 - z[2][i][k][l]) -
+                                         BIG_M * (1 - z[2][i][k][l + 1]),
                                 "56");
+                l += 2;
 
-                model.addConstr(4 >= (dsp[i][k]) -
-                                         BIG_M * (1 - z[2][i][k][l++]) -
-                                         BIG_M * (1 - z[2][i][k][l++]),
+                model.addConstr(4 >= (dsp[i][k]) - BIG_M * (1 - z[2][i][k][l]) -
+                                         BIG_M * (1 - z[2][i][k][l + 1]),
                                 "57");
-                model.addConstr(5 >= (dsp[i][k]) -
-                                         BIG_M * (1 - z[2][i][k][l++]) -
-                                         BIG_M * (1 - z[2][i][k][l++]),
+                l += 2;
+                model.addConstr(5 >= (dsp[i][k]) - BIG_M * (1 - z[2][i][k][l]) -
+                                         BIG_M * (1 - z[2][i][k][l + 1]),
                                 "56");
             }
         }
@@ -1291,7 +1573,7 @@ int milp_solver_pynq::solve_milp_pynq(pfsRef to_sim) {
                     1     7  <=  x  < 13
                     2     13  <=  x  < 17
         ******************************************************************/
-        for (i = 0; i < num_slots; i++) {
+        for (i = 0; i < (uint)num_slots; i++) {
             for (k = 0; k < 2; k++) {
                 l = 0;
                 GRBLinExpr exp;
@@ -1309,7 +1591,7 @@ int milp_solver_pynq::solve_milp_pynq(pfsRef to_sim) {
             }
         }
 
-        for (i = 0; i < num_slots; i++) {
+        for (i = 0; i < (uint)num_slots; i++) {
             for (k = 0; k < 2; k++) {
                 l = 0;
                 model.addConstr(dsp_fbdn[0][i][k] >=
@@ -1317,14 +1599,16 @@ int milp_solver_pynq::solve_milp_pynq(pfsRef to_sim) {
                                 "52");
 
                 model.addConstr(dsp_fbdn[0][i][k] >=
-                                    (1 - BIG_M * (1 - z[5][i][k][l++]) -
-                                     BIG_M * (1 - z[5][i][k][l++])),
+                                    (1 - BIG_M * (1 - z[5][i][k][l]) -
+                                     BIG_M * (1 - z[5][i][k][l + 1])),
                                 "53");
+                l += 2;
 
                 model.addConstr(dsp_fbdn[0][i][k] >=
-                                    (2 - BIG_M * (1 - z[5][i][k][l++]) -
-                                     BIG_M * (1 - z[5][i][k][l++])),
+                                    (2 - BIG_M * (1 - z[5][i][k][l]) -
+                                     BIG_M * (1 - z[5][i][k][l + 1])),
                                 "54");
+                l += 2;
             }
 
             for (k = 0; k < 2; k++) {
@@ -1334,13 +1618,14 @@ int milp_solver_pynq::solve_milp_pynq(pfsRef to_sim) {
                                 "55");
 
                 model.addConstr(1 >= (dsp_fbdn[0][i][k]) -
-                                         BIG_M * (1 - z[5][i][k][l++]) -
-                                         BIG_M * (1 - z[5][i][k][l++]),
+                                         BIG_M * (1 - z[5][i][k][l]) -
+                                         BIG_M * (1 - z[5][i][k][l + 1]),
                                 "56");
+                l += 2;
 
                 model.addConstr(2 >= (dsp_fbdn[0][i][k]) -
-                                         BIG_M * (1 - z[5][i][k][l++]) -
-                                         BIG_M * (1 - z[5][i][k][l++]),
+                                         BIG_M * (1 - z[5][i][k][l]) -
+                                         BIG_M * (1 - z[5][i][k][l + 1]),
                                 "57");
             }
         }
@@ -1349,10 +1634,10 @@ int milp_solver_pynq::solve_milp_pynq(pfsRef to_sim) {
         /*********************************************************************
           Constr 2.3: There must be enough clb, bram and dsp inside the slot
         **********************************************************************/
-        for (i = 0; i < num_slots; i++) {
-            GRBLinExpr exp_tau, exp_clb, exp_bram, exp_dsp;
+        for (i = 0; i < (uint)num_slots; i++) {
+            GRBLinExpr exp_clb, exp_bram, exp_dsp, exp_hw_task;
             GRBLinExpr exp_clb_fbdn, exp_bram_fbdn, exp_dsp_fbdn;
-            for (j = 0; j < num_clk_regs; j++) {
+            for (j = 0; j < (uint)num_clk_regs; j++) {
                 // CLB constraints
                 model.addConstr(tau[0][i][j] <= 10000 * beta[i][j], "58");
                 model.addConstr(tau[0][i][j] <= clb[i][1] - clb[i][0], "59");
@@ -1363,7 +1648,7 @@ int milp_solver_pynq::solve_milp_pynq(pfsRef to_sim) {
 
                 // CLB_FBDN 0
                 model.addConstr(tau_fbdn[0][0][i][j] <=
-                                    100000 * (beta_fbdn[j] + beta[i][j] - 1),
+                                    10000 * (beta_fbdn[j] + beta[i][j] - 1),
                                 "58");
                 model.addConstr(tau_fbdn[0][0][i][j] <=
                                     clb_fbdn[0][i][1] - clb_fbdn[0][i][0],
@@ -1443,35 +1728,58 @@ int milp_solver_pynq::solve_milp_pynq(pfsRef to_sim) {
                 exp_dsp_fbdn += tau_fbdn[0][2][i][j];
             }
 
-            model.addConstr(clb_per_tile * (exp_clb - exp_clb_fbdn) >=
-                                clb_req_pynq[i],
+            // partitioning patch
+            for (int a = 0; a < (int)task_set->maxHW_Tasks; a++)
+                exp_hw_task += A[a][i];
+
+            // partitioning patch
+            model.addConstr(clb_per_tile * (exp_clb - exp_clb_fbdn) >= b[0][i],
                             "68");
+            model.addConstr(clb_per_tile * (exp_clb - exp_clb_fbdn) <=
+                                BIG_M * exp_hw_task,
+                            "con hw1");
             model.addConstr(wasted[i][0] ==
                                 clb_per_tile * (exp_clb - exp_clb_fbdn) -
-                                    clb_req_pynq[i],
+                                    b[0][i],
                             "168"); // wasted clbs
 
             model.addConstr(clb_fbdn_tot[i] == exp_clb_fbdn, "169");
+            // model.addConstr(clb_per_tile * exp_clb >= clb_req_pynq[i],"68");
+            // model.addConstr(wasted[i][0] == (clb_per_tile * exp_clb) -
+            // clb_req_pynq[i],"168"); //wasted clbs
 
-            model.addConstr(bram_per_tile * (exp_bram - exp_bram_fbdn) >=
-                                bram_req_pynq[i],
-                            "69");
+            // partitioning patch
+            model.addConstr(
+                bram_per_tile * (exp_bram - exp_bram_fbdn) >= b[1][i], "69");
+            model.addConstr(bram_per_tile * (exp_bram - exp_bram_fbdn) <=
+                                BIG_M * exp_hw_task,
+                            "con hw1");
             model.addConstr(wasted[i][1] ==
                                 bram_per_tile * (exp_bram - exp_bram_fbdn) -
-                                    bram_req_pynq[i],
-                            "169"); // wasted brams
+                                    b[1][i],
+                            "169");
 
             model.addConstr(bram_fbdn_tot[i] == exp_bram_fbdn, "169");
+            // model.addConstr(bram_per_tile * exp_bram >=
+            // bram_req_pynq[i],"69"); model.addConstr(wasted[i][1] ==
+            // (bram_per_tile * exp_bram) - bram_req_pynq[i],"169"); //wasted
+            // brams
 
-            model.addConstr(dsp_per_tile * (exp_dsp - exp_dsp_fbdn) >=
-                                dsp_req_pynq[i],
+            // partitioning patch
+            model.addConstr(dsp_per_tile * (exp_dsp - exp_dsp_fbdn) >= b[2][i],
                             "70");
+            model.addConstr(dsp_per_tile * (exp_dsp - exp_dsp_fbdn) <=
+                                BIG_M * exp_hw_task,
+                            "con hw1");
             model.addConstr(wasted[i][2] ==
                                 dsp_per_tile * (exp_dsp - exp_dsp_fbdn) -
-                                    dsp_req_pynq[i],
+                                    b[2][i],
                             "170");
 
             model.addConstr(dsp_fbdn_tot[i] == exp_dsp_fbdn, "169");
+            // model.addConstr(dsp_per_tile * exp_dsp >= dsp_req_pynq[i],"70");
+            // model.addConstr(wasted[i][2] == (dsp_per_tile * exp_dsp) -
+            // dsp_req_pynq[i], "170");
         }
 
         // Interference constraints
@@ -1481,9 +1789,9 @@ int milp_solver_pynq::solve_milp_pynq(pfsRef to_sim) {
 
                 model.addConstr(exp <= 6, "49000");& Psi must be fixed
         ***********************************************************************/
-        for (i = 0; i < num_slots; i++) {
+        for (i = 0; i < (uint)num_slots; i++) {
             GRBLinExpr exp;
-            for (k = 0; k < num_slots; k++) {
+            for (k = 0; k < (uint)num_slots; k++) {
                 if (i == k)
                     continue;
                 //               model.addConstr(BIG_M * gamma[i][k] >= x[k][0]
@@ -1518,8 +1826,8 @@ int milp_solver_pynq::solve_milp_pynq(pfsRef to_sim) {
         Constraint 3.1 Non interference between slot 'i' and 'k'
         ************************************************************************/
 
-        for (i = 0; i < num_slots; i++) {
-            for (k = 0; k < num_slots; k++) {
+        for (i = 0; i < (uint)num_slots; i++) {
+            for (k = 0; k < (uint)num_slots; k++) {
                 if (i == k)
                     continue;
 
@@ -1541,7 +1849,7 @@ int milp_solver_pynq::solve_milp_pynq(pfsRef to_sim) {
                                 "72");
                 model.addConstr(delta[0][i][k] == 0, "73");
 
-                //               for(j = 0; j < num_clk_regs; j++) {
+                //               for(j = 0; j < (uint)num_clk_regs; j++) {
                 //                   model.addConstr(x[k][0] >= x[i][1] - (3 -
                 //                   gamma[i][k] - beta[i][j] - beta[k][j]) *
                 //                   BIG_M, "777");
@@ -1554,13 +1862,13 @@ int milp_solver_pynq::solve_milp_pynq(pfsRef to_sim) {
         Constriant 4.0: Global Resources should not be included inside slots
         *************************************************************************/
         /*
-                for(i = 0; i < num_forbidden_slots; i++) {
-                    for(j = 0; j < num_slots; j++)
+                for(i = 0; i < (uint)num_forbidden_slots; i++) {
+                    for(j = 0; j < (uint)num_slots; j++)
                         model.addConstr(mu[i][j] >= 0);
                 }
 
-                for(i = 0; i < num_forbidden_slots; i++) {
-                    for(k = 0; k < num_slots; k++) {
+                for(i = 0; i < (uint)num_forbidden_slots; i++) {
+                    for(k = 0; k < (uint)num_slots; k++) {
         //              model.addConstr(BIG_M * mu[i][k]  >= x[k][0] -
         fs_pynq[i].x, "74");
 
@@ -1573,30 +1881,16 @@ int milp_solver_pynq::solve_milp_pynq(pfsRef to_sim) {
         fs_pynq[i].y + fs_pynq[i].h - (y[k] * num_rows) + 1, "78");
                         model.addConstr(BIG_M * fbdn_4[i][k] >= (y[k] + h[k]) *
         num_rows - fs_pynq[i].y + 1, "79");
-
-                        //model.addConstr(BIG_M * mu[i][k]     >= x[k][0] -
-        fs_pynq[i].x, "74");
-                        //model.addConstr(BIG_M * nu[i][k]     >= y[k] *
-        num_rows   - fs_pynq[i].y, "75");
-                        //model.addConstr(BIG_M * fbdn_1[i][k] >= fs_pynq[i].x +
-        fs_pynq[i].w - x[k][0] + 1, "76");
-                        //model.addConstr(BIG_M * fbdn_2[i][k] >= x[k][1] -
-        fs_pynq[i].x + 1, "77");
-                        //model.addConstr(BIG_M * fbdn_3[i][k] >= fs_pynq[i].y +
-        fs_pynq[i].h - (y[k] * num_rows) + 1, "78");
-                        //model.addConstr(BIG_M * fbdn_4[i][k] >= (y[k] + h[k])
-        * num_rows - fs_pynq[i].y + 1, "79");
                     }
                 }
         */
         /*************************************************************************
         Constraint 4.1:
         **************************************************************************/
-        /*
-                for(i = 0; i < num_forbidden_slots; i++) {
+        /*       for(i = 0; i < (uint)num_forbidden_slots; i++) {
                     //GRBLinExpr exp_delta;
 
-                    for(k = 0; k < num_slots; k++) {
+                    for(k = 0; k < (uint)num_slots; k++) {
 
                         model.addConstr(delta[1][i][k] >= mu[i][k] + nu[i][k] +
         fbdn_1[i][k] + fbdn_3[i][k] - 3, "80");
@@ -1612,7 +1906,7 @@ int milp_solver_pynq::solve_milp_pynq(pfsRef to_sim) {
 
                         model.addConstr(delta[1][i][k] == 0, "84");
 
-        //                for(j = 0; j < num_clk_regs; j++) {
+        //                for(j = 0; j < (uint)num_clk_regs; j++) {
         //                    model.addConstr(x[k][0] >= fs_pynq[i].x +
         fs_pynq[i].w - (3 - mu[i][k] - clk_reg_fbdn[i][j] - beta[k][j]) * BIG_M,
         "777");
@@ -1622,12 +1916,13 @@ int milp_solver_pynq::solve_milp_pynq(pfsRef to_sim) {
                   }
                 }
         */
+
         /*************************************************************************
         Constraint 4.2:
         **************************************************************************/
 
-        for (i = 0; i < num_slots; i++) {
-            for (j = 0; j < num_fbdn_edge; j++) {
+        for (i = 0; i < (uint)num_slots; i++) {
+            for (j = 0; j < (uint)num_fbdn_edge; j++) {
                 l = 0;
                 model.addConstr(x[i][0] - forbidden_boundaries_left[j] <=
                                     -0.01 + kappa[i][j][l] * BIG_M,
@@ -1655,13 +1950,13 @@ int milp_solver_pynq::solve_milp_pynq(pfsRef to_sim) {
             obj_wasted_dsp;
         unsigned long wl_max = 0;
 
-        for (i = 0; i < num_slots; i++) {
+        for (i = 0; i < (uint)num_slots; i++) {
             model.addConstr(centroid[i][0] == x[i][0] + w[i] / 2, "84");
             model.addConstr(centroid[i][1] == y[i] * 10 + h[i] * 10 / 2, "86");
         }
 
-        for (i = 0; i < num_slots; i++) {
-            for (j = 0; j < num_slots; j++) {
+        for (i = 0; i < (uint)num_slots; i++) {
+            for (j = 0; j < (uint)num_slots; j++) {
                 if (i >= j) {
                     continue;
                 }
@@ -1676,8 +1971,8 @@ int milp_solver_pynq::solve_milp_pynq(pfsRef to_sim) {
             }
         }
 
-        for (i = 0; i < num_slots; i++) {
-            /*            for(j = 0; j < num_slots; j++) {
+        for (i = 0; i < (uint)num_slots; i++) {
+            /*            for(j = 0; j < (uint)num_slots; j++) {
                             if(i >= j)
                                 continue;
                             obj_x += dist[i][j][0];
@@ -1692,7 +1987,7 @@ int milp_solver_pynq::solve_milp_pynq(pfsRef to_sim) {
         cout << "added opt" << endl;
 
         if (num_conn_slots_pynq > 0) {
-            for (i = 0; i < num_conn_slots_pynq; i++) {
+            for (i = 0; i < (uint)num_conn_slots_pynq; i++) {
                 dist_0 = conn_matrix_pynq[i][0] - 1;
                 dist_1 = conn_matrix_pynq[i][1] - 1;
                 dist_2 = conn_matrix_pynq[i][2];
@@ -1701,7 +1996,7 @@ int milp_solver_pynq::solve_milp_pynq(pfsRef to_sim) {
                 obj_y += dist[dist_0][dist_1][1] * dist_2;
             }
 
-            for (i = 0; i < num_conn_slots_pynq; i++) {
+            for (i = 0; i < (uint)num_conn_slots_pynq; i++) {
                 wl_max += conn_matrix_pynq[i][2] * (W + H * 20);
             }
 
@@ -1724,16 +2019,153 @@ int milp_solver_pynq::solve_milp_pynq(pfsRef to_sim) {
         wasted_clb_pynq = 0;
         wasted_bram_pynq = 0;
         wasted_dsp_pynq = 0;
-        int w_x = 0, w_y = 0;
+        // unsigned long w_x = 0, w_y = 0;
 
         status = model.get(GRB_IntAttr_Status);
+        if (status == GRB_OPTIMAL) {
+            // ------------------------------------------------------------
+            // Partition OUTPUT
+            // ------------------------------------------------------------
+            cout << "----------------------------------------------------------"
+                    "----------"
+                 << endl;
+            cout << "-) HW-TASK ALLOCATION" << endl;
+            cout << "----------------------------------------------------------"
+                    "----------"
+                 << endl;
+            cout << endl;
+            cout << "Partition: \t\t";
+            for (uint k = 0; k < t.maxPartitions; k++)
+                cout << k << "\t";
+            cout << endl;
+            cout << "----------------------------------------------------------"
+                    "----------"
+                 << endl;
+            for (uint a = 0; a < t.maxHW_Tasks; a++) {
+                cout << "HW-Task [" << a << "] : \t";
+                for (uint k = 0; k < t.maxPartitions; k++) {
+                    if ((unsigned int)A[a][k].get(GRB_DoubleAttr_X))
+                        cout << "X" << "\t";
+                    else
+                        cout << " " << "\t";
+                    // cout << A[a][k].get(GRB_DoubleAttr_X) << "\t";
+                }
 
-        if (status == GRB_OPTIMAL || status == GRB_TIME_LIMIT) {
+                cout << endl;
+            }
+
+            // #ifdef dspppp
+            cout << endl;
+            cout << "----------------------------------------------------------"
+                    "----------"
+                 << endl;
+            cout << "-) RECONFIGURATION TIMES" << endl;
+            cout << "----------------------------------------------------------"
+                    "----------"
+                 << endl;
+            cout << endl;
+
+            cout << endl;
+
+            /*for(uint a=0; a < t.maxHW_Tasks; a++)
+                for(uint b=0; b < t.maxHW_Tasks; b++)
+                    cout << "I_SLOT["<<a<<"]["<<b<<"] = " <<
+               I_SLOT[a][b].get(GRB_DoubleAttr_X)<<endl;*/
+
+            for (uint a = 0; a < t.maxHW_Tasks; a++)
+                cout << "r[" << a << "] = " << r[a].get(GRB_DoubleAttr_X)
+                     << endl;
+
+            for (uint a = 0; a < t.maxHW_Tasks; a++) {
+                for (uint k = 0; k < t.maxPartitions; k++)
+                    if ((unsigned int)A[a][k].get(GRB_DoubleAttr_X))
+                        cout << "r[" << a << "][" << k << "] = CLB "
+                             << b[0][a].get(GRB_DoubleAttr_X) << " Bram "
+                             << b[1][a].get(GRB_DoubleAttr_X) << " DSP "
+                             << b[2][a].get(GRB_DoubleAttr_X) << endl;
+            }
+
+            for (uint a = 0; a < t.maxHW_Tasks; a++)
+                cout << "gamma_part[" << a
+                     << "] = " << gamma_part[a].get(GRB_DoubleAttr_X) << endl;
+
+            // #endif
+            // stores the chosen partitions
+            vector<unsigned long> active_partitions(t.maxPartitions, 0);
+
+            for (uint k = 0; k < t.maxPartitions; k++)
+                for (uint a = 0; a < t.maxHW_Tasks; a++)
+                    if ((unsigned int)A[a][k].get(GRB_DoubleAttr_X))
+                        active_partitions[k] = 1;
+
+            for (uint k = 0; k < t.maxPartitions; k++)
+                num_active_partitions += active_partitions[k];
+
+            cout << endl;
+            cout << "num partitions = " << (uint)num_active_partitions << endl;
+
+            // ------------------------------------------------------------
+            // packing allocation to struct
+            // ------------------------------------------------------------
+            bool is_part_allocated = false;
+            // unsigned int index = 0, num_tasks_in_part, task_id_in_part;
+            unsigned int index = 0, num_tasks_in_part;
+
+            for (uint k = 0; k < t.maxPartitions; k++) {
+                is_part_allocated = false;
+                num_tasks_in_part = 0;
+
+                for (uint a = 0; a < t.maxHW_Tasks; a++) {
+                    if ((unsigned int)A[a][k].get(GRB_DoubleAttr_X)) {
+                        is_part_allocated = true;
+                        num_tasks_in_part += 1;
+                        (*to_sim->task_alloc)[index].task_id.push_back(a);
+                    }
+                }
+                if (is_part_allocated) {
+                    (*to_sim->task_alloc)[index].num_tasks_in_part =
+                        num_tasks_in_part;
+                    (*to_sim->task_alloc)[index].num_hw_tasks_in_part =
+                        num_tasks_in_part;
+                    index += 1;
+                }
+            }
+
+            // Get which partitions has the highest number of RMs
+            unsigned long max_modules_per_partition = 0;
+            for (uint k = 0; k < (uint)num_active_partitions; k++) {
+                if ((*to_sim->task_alloc)[k].num_tasks_in_part >
+                    (int)max_modules_per_partition)
+                    max_modules_per_partition =
+                        (*to_sim->task_alloc)[k].num_tasks_in_part;
+            }
+
+            to_sim->max_modules_per_partition = max_modules_per_partition;
+
+            cout << endl;
+            cout << "----------------------------------------------------------"
+                    "----------"
+                 << endl;
+            cout << " RESOURCE REQUIREMENT OF RMs" << endl;
+            cout << "----------------------------------------------------------"
+                    "----------"
+                 << endl;
+            cout << endl;
+
+            for (i = 0; i < (uint)num_slots; i++) {
+                cout << "RM_" << i << "\t" << "CLB = " << clb_req_pynq[i]
+                     << endl;
+                cout << "\t" << "BRAM = " << bram_req_pynq[i] << endl;
+                cout << "\t" << "DSP  = " << dsp_req_pynq[i] << endl;
+
+                cout << endl;
+            }
+
             cout
                 << "---------------------------------------------------------------------\
---------------------------------------------------------------------------- "
+-------------------------------------------------------------------------------------------"
                 << endl;
-            cout << "slot \t" << "x_0 \t" << "x_1 \t" << "y \t" << "w \t"
+            cout << "RR \t" << "x_0 \t" << "x_1 \t" << "y \t" << "w \t"
                  << "h \t" << "clb_0 \t"
                  << "clb_1 \t" << "clb \t" << "req\t" << "bram_0 \t"
                  << "bram_1 \t" << "bram \t"
@@ -1741,198 +2173,193 @@ int milp_solver_pynq::solve_milp_pynq(pfsRef to_sim) {
                  << endl;
             cout
                 << "----------------------------------------------------------------------\
-------------------------------------------------------------------------"
+-------------------------------------------------------------------------------------------"
                 << endl;
+            for (i = 0, m = 0; i < (uint)num_slots; i++) {
 
-            for (i = 0; i < num_slots; i++) {
-                cout << i << "\t" << x[i][0].get(GRB_DoubleAttr_X) << "\t"
-                     << x[i][1].get(GRB_DoubleAttr_X) << "\t"
-                     << y[i].get(GRB_DoubleAttr_X) << " \t"
-                     << w[i].get(GRB_DoubleAttr_X) << "\t"
-                     << h[i].get(GRB_DoubleAttr_X)
+                if (active_partitions[i]) {
+                    (*to_sim->x)[m] = (int)x[i][0].get(GRB_DoubleAttr_X);
+                    (*to_sim->y)[m] = (int)y[i].get(GRB_DoubleAttr_X) * 10;
+                    (*to_sim->w)[m] = (int)w[i].get(GRB_DoubleAttr_X);
+                    (*to_sim->h)[m] = (int)h[i].get(GRB_DoubleAttr_X) * 10;
+                    (*to_sim->clb_from_solver)[m] =
+                        (int)(((clb[i][1].get(GRB_DoubleAttr_X) -
+                                clb[i][0].get(GRB_DoubleAttr_X)) *
+                                   h[i].get(GRB_DoubleAttr_X) -
+                               clb_fbdn_tot[i].get(GRB_DoubleAttr_X)) *
+                              clb_per_tile);
 
-                     << "\t" << clb[i][0].get(GRB_DoubleAttr_X) << "\t"
-                     << clb[i][1].get(GRB_DoubleAttr_X) << "\t"
-                     << ((clb[i][1].get(GRB_DoubleAttr_X) -
-                          clb[i][0].get(GRB_DoubleAttr_X)) *
-                             h[i].get(GRB_DoubleAttr_X) -
-                         clb_fbdn_tot[i].get(GRB_DoubleAttr_X)) *
-                            clb_per_tile
-                     << "\t" << clb_req_pynq[i]
+                    (*to_sim->bram_from_solver)[m] =
+                        (int)(((bram[i][1].get(GRB_DoubleAttr_X) -
+                                bram[i][0].get(GRB_DoubleAttr_X)) *
+                                   h[i].get(GRB_DoubleAttr_X) -
+                               bram_fbdn_tot[i].get(GRB_DoubleAttr_X)) *
+                              bram_per_tile);
 
-                     << "\t" << bram[i][0].get(GRB_DoubleAttr_X) << "\t"
-                     << bram[i][1].get(GRB_DoubleAttr_X) << "\t"
-                     << ((bram[i][1].get(GRB_DoubleAttr_X) -
-                          bram[i][0].get(GRB_DoubleAttr_X)) *
-                             h[i].get(GRB_DoubleAttr_X) -
-                         bram_fbdn_tot[i].get(GRB_DoubleAttr_X)) *
-                            bram_per_tile
-                     << "\t" << bram_req_pynq[i]
+                    (*to_sim->dsp_from_solver)[m] =
+                        (int)(((dsp[i][1].get(GRB_DoubleAttr_X) -
+                                dsp[i][0].get(GRB_DoubleAttr_X)) *
+                                   h[i].get(GRB_DoubleAttr_X) -
+                               dsp_fbdn_tot[i].get(GRB_DoubleAttr_X)) *
+                              dsp_per_tile);
+                    m += 1;
+                    //               }
 
-                     << "\t" << dsp[i][0].get(GRB_DoubleAttr_X) << "\t"
-                     << dsp[i][1].get(GRB_DoubleAttr_X) << "\t"
-                     << ((dsp[i][1].get(GRB_DoubleAttr_X) -
-                          dsp[i][0].get(GRB_DoubleAttr_X)) *
-                             h[i].get(GRB_DoubleAttr_X) -
-                         dsp_fbdn_tot[i].get(GRB_DoubleAttr_X)) *
-                            dsp_per_tile
-                     << "\t" << dsp_req_pynq[i] << endl;
+                    cout << m << "\t" << x[i][0].get(GRB_DoubleAttr_X) << "\t"
+                         << x[i][1].get(GRB_DoubleAttr_X) << "\t"
+                         << y[i].get(GRB_DoubleAttr_X) << " \t"
+                         << w[i].get(GRB_DoubleAttr_X) << "\t"
+                         << h[i].get(GRB_DoubleAttr_X)
 
-                //                        cout <<endl;
+                         << "\t" << clb[i][0].get(GRB_DoubleAttr_X) << "\t"
+                         << clb[i][1].get(GRB_DoubleAttr_X) << "\t"
+                         << ((clb[i][1].get(GRB_DoubleAttr_X) -
+                              clb[i][0].get(GRB_DoubleAttr_X)) *
+                                 h[i].get(GRB_DoubleAttr_X) -
+                             clb_fbdn_tot[i].get(GRB_DoubleAttr_X)) *
+                                clb_per_tile
+                         << "\t" << task_set->HW_Tasks[i].resDemand[CLB]
 
-                (*to_sim->x)[i] = (int)x[i][0].get(GRB_DoubleAttr_X);
-                (*to_sim->y)[i] = (int)y[i].get(GRB_DoubleAttr_X) * 10;
-                (*to_sim->w)[i] = (int)w[i].get(GRB_DoubleAttr_X);
-                (*to_sim->h)[i] = (int)h[i].get(GRB_DoubleAttr_X) * 10;
-                (*to_sim->clb_from_solver)[i] =
-                    (int)((clb[i][1].get(GRB_DoubleAttr_X) -
-                           clb[i][0].get(GRB_DoubleAttr_X)) *
-                          h[i].get(GRB_DoubleAttr_X) * clb_per_tile);
-                (*to_sim->bram_from_solver)[i] =
-                    (int)((bram[i][1].get(GRB_DoubleAttr_X) -
-                           bram[i][0].get(GRB_DoubleAttr_X)) *
-                          h[i].get(GRB_DoubleAttr_X) * bram_per_tile);
-                (*to_sim->dsp_from_solver)[i] =
-                    (int)((dsp[i][1].get(GRB_DoubleAttr_X) -
-                           dsp[i][0].get(GRB_DoubleAttr_X)) *
-                          h[i].get(GRB_DoubleAttr_X) * dsp_per_tile);
-                /*
-                                        for(k=0; k < 2; k++) {
-                                            for(l = 0; l < 16; l++)
-                                                cout <<"z" << l << " " <<
-                   z[0][i][k][l].get(GRB_DoubleAttr_X) << "\t"; cout <<endl;
-                                        }
+                         << "\t" << bram[i][0].get(GRB_DoubleAttr_X) << "\t"
+                         << bram[i][1].get(GRB_DoubleAttr_X) << "\t"
+                         << ((bram[i][1].get(GRB_DoubleAttr_X) -
+                              bram[i][0].get(GRB_DoubleAttr_X)) *
+                                 h[i].get(GRB_DoubleAttr_X) -
+                             bram_fbdn_tot[i].get(GRB_DoubleAttr_X)) *
+                                bram_per_tile
+                         << "\t" << task_set->HW_Tasks[i].resDemand[BRAM]
 
-                                        for(k=0; k < num_clk_regs; k++) {
-                                                cout <<"b" << k << " " <<
-                   beta[i][k].get(GRB_DoubleAttr_X) << "\t"; cout<<endl;
-                                        }
-                */
-            }
-            /*
-                        for(k=0; k < num_forbidden_slots; k++) {
-                            for(j = 0; j < num_slots; j++)
-                                cout <<"mu" << k << j<< " " <<
-               mu[k][j].get(GRB_DoubleAttr_X) << "\t"; cout<<endl;
-                        }
-            */
-            cout << endl;
-
-            for (i = 0; i < num_slots; i++) {
-                wasted_clb_pynq += wasted[i][0].get(GRB_DoubleAttr_X);
-                wasted_bram_pynq += wasted[i][1].get(GRB_DoubleAttr_X);
-                wasted_dsp_pynq += wasted[i][2].get(GRB_DoubleAttr_X);
-
-                cout << "wasted clb " << wasted[i][0].get(GRB_DoubleAttr_X)
-                     << " wasted bram " << wasted[i][1].get(GRB_DoubleAttr_X)
-                     << " wasted dsp " << wasted[i][2].get(GRB_DoubleAttr_X)
-                     << endl;
-                /*
-                                cout<< "centroid " << i << " " <<
-                   centroid[i][0].get(GRB_DoubleAttr_X) << " " <<
-                                       centroid[i][1].get(GRB_DoubleAttr_X)
-                   <<endl;
-                */
-                for (j = 0; j < num_slots; j++) {
-                    if (i >= j)
-                        continue;
-                    w_x += dist[i][j][0].get(GRB_DoubleAttr_X);
-                    w_y += dist[i][j][1].get(GRB_DoubleAttr_X);
+                         << "\t" << dsp[i][0].get(GRB_DoubleAttr_X) << "\t"
+                         << dsp[i][1].get(GRB_DoubleAttr_X) << "\t"
+                         << ((dsp[i][1].get(GRB_DoubleAttr_X) -
+                              dsp[i][0].get(GRB_DoubleAttr_X)) *
+                                 h[i].get(GRB_DoubleAttr_X) -
+                             dsp_fbdn_tot[i].get(GRB_DoubleAttr_X)) *
+                                dsp_per_tile
+                         << "\t" << task_set->HW_Tasks[i].resDemand[DSP]
+                         << endl;
                 }
+
+                //                cout <<endl;
+                /*
+                                cout << "num clbs in forbidden slot is " <<
+                   clb_fbdn_tot[i].get(GRB_DoubleAttr_X) * clb_per_tile <<endl;
+                                cout << "num clb 0 in forbidden slot "<< 0 <<"
+                   is " << clb_fbdn[0][i][0].get(GRB_DoubleAttr_X) <<endl; cout
+                   << "num clbs 1 in forbidden slot " <<0 << "is " <<
+                   clb_fbdn[0][i][1].get(GRB_DoubleAttr_X) <<endl;
+
+                                cout <<endl;
+                                cout << "num clb 0 in forbidden slot " << 1 << "
+                   is " << clb_fbdn[1][i][0].get(GRB_DoubleAttr_X) <<endl; cout
+                   << "num clbs 1 in forbidden slot " << 1 << " is " <<
+                   clb_fbdn[1][i][1].get(GRB_DoubleAttr_X) <<endl;
+
+                                cout << endl;
+                                cout << "num bram in forbidden slot is " <<
+                   bram_fbdn_tot[i].get(GRB_DoubleAttr_X) * bram_per_tile
+                   <<endl; cout << "num bram 0 in forbidden slot "<< i <<" is "
+                   << bram_fbdn[0][i][0].get(GRB_DoubleAttr_X) <<endl; cout <<
+                   "num bram 1 in forbidden slot " <<i << "is " <<
+                   bram_fbdn[0][i][1].get(GRB_DoubleAttr_X) <<endl;
+
+                                cout <<endl;
+                                cout << "total dsp in forbidden slot is " <<
+                   dsp_fbdn_tot[i].get(GRB_DoubleAttr_X) * dsp_per_tile <<endl;
+                                cout << "num dsp 0 in forbidden slot " << i << "
+                   is " << dsp_fbdn[1][i][0].get(GRB_DoubleAttr_X) <<endl; cout
+                   << "num dsp 1 in forbidden slot " << i << " is " <<
+                   dsp_fbdn[1][i][1].get(GRB_DoubleAttr_X) <<endl;
+
+                */
+
+                /*
+                                for(k=0; k < 2; k++) {
+                                    for(l = 0; l < 14; l++)
+                                         cout <<"z" << l << " " <<
+                   z[3][i][k][l].get(GRB_DoubleAttr_X) << "\t"; cout <<endl;
+                                }
+
+                                for(k=0; k < 2; k++) {
+                                    for(l = 0; l < 9; l++)
+                                        cout <<"z" << l << " " <<
+                   z[3][i][k][l].get(GRB_DoubleAttr_X) << "\t"; cout<<endl;
+                                }
+
+                                for(k=0; k < 2; k++) {
+                                    for(l = 0; l < 4; l++)
+                                        cout <<"z" << l << " " <<
+                   z[3][i][k][l].get(GRB_DoubleAttr_X) << "\t"; cout<<endl;
+                                }
+                */
             }
 
+            to_sim->num_partition = num_active_partitions;
             cout << endl;
-            cout << "total wasted clb " << wasted_clb_pynq
-                 << " total wasted bram " << wasted_bram_pynq
-                 << " total wastd dsp " << wasted_dsp_pynq << endl;
-
-            cout << endl;
-            cout << " total wire length " << w_x << "  " << w_y << "  "
-                 << w_y + w_x << endl;
-
             /*
-                        for(i = 0; i < num_slots; i++) {
-                            cout << "num clbs in forbidden slot is " <<
-               clb_fbdn_tot[i].get(GRB_DoubleAttr_X) * clb_per_tile <<endl; cout
-               << "num clb 0 in forbidden slot "<< 0 <<" is " <<
-               clb_fbdn[0][i][0].get(GRB_DoubleAttr_X) <<endl; cout << "num clbs
-               1 in forbidden slot " <<0 << "is " <<
-               clb_fbdn[0][i][1].get(GRB_DoubleAttr_X) <<endl;
+                        for (i = 0; i < (uint)num_slots; i++) {
+                            wasted_clb_zynq  +=
+               wasted[i][0].get(GRB_DoubleAttr_X); wasted_bram_zynq +=
+               wasted[i][1].get(GRB_DoubleAttr_X); wasted_dsp_zynq  +=
+               wasted[i][2].get(GRB_DoubleAttr_X);
 
-                            //cout << "num clbs in forbidden slot is " <<
-               clb_fbdn_tot[i].get(GRB_DoubleAttr_X) * clb_per_tile <<endl; cout
-               << "num clb 0 in forbidden slot "<< 0 <<" is " <<
-               clb_fbdn[1][i][0].get(GRB_DoubleAttr_X) <<endl; cout << "num clbs
-               1 in forbidden slot " <<0 << "is " <<
-               clb_fbdn[1][i][1].get(GRB_DoubleAttr_X) <<endl;
+                            cout << "wasted clb " <<
+               wasted[i][0].get(GRB_DoubleAttr_X) << " wasted bram " <<
+               wasted[i][1].get(GRB_DoubleAttr_X) << " wasted dsp " <<
+               wasted[i][2].get(GRB_DoubleAttr_X) <<endl;
 
-                            for(k=0; k < 2; k++) {
-                                for(l = 0; l < 16; l++)
-                                     cout <<"z" << l << " " <<
-               z[3][i][k][l].get(GRB_DoubleAttr_X) << "\t"; cout <<endl;
+                            cout<< "centroid " << i <<
+               centroid[i][0].get(GRB_DoubleAttr_X) << " "
+               <<centroid[i][1].get(GRB_DoubleAttr_X) <<endl; for(j = 0; j <
+               num_slots; j++) { if(i >= j) continue; w_x +=
+               dist[i][j][0].get(GRB_DoubleAttr_X); w_y +=
+               dist[i][j][1].get(GRB_DoubleAttr_X);
+
                             }
 
-
-                   //         cout <<endl;
-                   //         cout << "num clb 0 in forbidden slot " << 1 << "
-               is " << clb_fbdn[1][i][0].get(GRB_DoubleAttr_X) <<endl;
-                   //         cout << "num clbs 1 in forbidden slot " << 1 << "
-               is " << clb_fbdn[1][i][1].get(GRB_DoubleAttr_X) <<endl;
-
-                            cout << endl;
-                            cout << "num bram in forbidden slot is " <<
-               bram_fbdn_tot[i].get(GRB_DoubleAttr_X) * bram_per_tile <<endl;
-                            cout << "num bram 0 in forbidden slot "<< i <<" is "
-               << bram_fbdn[0][i][0].get(GRB_DoubleAttr_X) <<endl; cout << "num
-               bram 1 in forbidden slot " <<i << "is " <<
-               bram_fbdn[0][i][1].get(GRB_DoubleAttr_X) <<endl;
-
-                            cout <<endl;
-                            cout << "total dsp in forbidden slot is " <<
-               dsp_fbdn_tot[i].get(GRB_DoubleAttr_X) * dsp_per_tile <<endl; cout
-               << "num dsp 0 in forbidden slot " << i << " is " <<
-               dsp_fbdn[0][i][0].get(GRB_DoubleAttr_X) <<endl; cout << "num dsp
-               1 in forbidden slot " << i << " is " <<
-               dsp_fbdn[0][i][1].get(GRB_DoubleAttr_X) <<endl; cout <<endl;
-
-                    }
+                        }
+                            cout << "total wasted clb " <<wasted_clb_zynq << "
+               total wasted bram " << wasted_bram_zynq << " total wastd dsp " <<
+               wasted_dsp_zynq <<endl; cout << " total wire length " << w_x << "
+               " << w_y << "  " <<  w_y + w_x << endl;
+                     }
             */
+
         }
 
         else {
 
             model.set(GRB_IntParam_Threads, 8);
-            // model.set(GRB_DoubleParam_TimeLimit, 120);
-            model.set(GRB_DoubleParam_TimeLimit, 240);
+            model.set(GRB_DoubleParam_TimeLimit, 120);
             model.computeIIS();
 
             cout << "the following constraints can not be satisfied" << endl;
             c = model.getConstrs();
 
-            for (i = 0; i < model.get(GRB_IntAttr_NumConstrs); i++)
+            for (i = 0; i < (unsigned long)model.get(GRB_IntAttr_NumConstrs);
+                 i++)
                 if (c[i].get(GRB_IntAttr_IISConstr) == 1)
                     cout << c[i].get(GRB_StringAttr_ConstrName) << endl;
         }
     } catch (GRBException e) {
         cout << "Error code =" << e.getErrorCode() << endl;
         cout << e.getMessage() << endl;
-
-        return 0;
+        exit(EXIT_FAILURE);
     } catch (...) {
         cout << "exception while solving milp" << endl;
-        return 0;
+        exit(EXIT_FAILURE);
     }
     return status;
 }
 
 int milp_solver_pynq::start_optimizer(pfsRef to_sim, ptsRef param) {
-    cout << "pynq slover start optimizer" << endl;
-    std::atomic<int> m = 0;
+
+    int m = 0;
     int k = 0;
     int temp;
-    int i;
+    unsigned long i;
 
-    num_slots = param->num_rm_partitions;
+    num_slots = param->num_rm_modules;
     num_forbidden_slots = param->num_forbidden_slots;
     num_rows = param->num_rows;
     H = param->num_clk_regs;
@@ -1944,7 +2371,11 @@ int milp_solver_pynq::start_optimizer(pfsRef to_sim, ptsRef param) {
     bram_per_tile = param->bram_per_tile;
     dsp_per_tile = param->dsp_per_tile;
 
-    for (i = 0; i < num_slots; i++) {
+    task_set = param->task_set;
+    platform = param->platform;
+    slacks = *param->slacks;
+
+    for (i = 0; i < (uint)num_slots; i++) {
         clb_req_pynq[i] = (*param->clb)[i];
         bram_req_pynq[i] = (*param->bram)[i];
         dsp_req_pynq[i] = (*param->dsp)[i];
@@ -1952,17 +2383,17 @@ int milp_solver_pynq::start_optimizer(pfsRef to_sim, ptsRef param) {
         // bram_req_pynq[i] << "dsp " << dsp_req_pynq[i] << endl;
     }
 
-    for (i = 0; i < num_conn_slots_pynq; i++) {
+    for (i = 0; i < (uint)num_conn_slots_pynq; i++) {
         for (k = 0; k < 3; k++)
             conn_matrix_pynq[i][k] = (*(param->conn_vector))[i][k];
     }
 
     m = 0;
-    for (i = 0; i < num_conn_slots_pynq; i++) {
+    for (i = 0; i < (uint)num_conn_slots_pynq; i++) {
         m = 0;
         //       for(k = 0; k < 3; k++)
-        temp = conn_matrix_pynq[i][m++] + conn_matrix_pynq[i][m++] +
-               conn_matrix_pynq[i][m++];
+        temp = conn_matrix_pynq[i][m] + conn_matrix_pynq[i][m + 1] +
+               conn_matrix_pynq[i][m + 2];
         cout << "inside solver " << temp << /*m <<
         conn_matrix_pynq[i][m++] << " m " << m <<
         conn_matrix_pynq[i][m++] << " m" << m << <<
@@ -1975,16 +2406,17 @@ int milp_solver_pynq::start_optimizer(pfsRef to_sim, ptsRef param) {
         // cout << conn_matrix_pynq[i][k] << endl;
     }
 
-    for (i = 0; i < num_forbidden_slots; i++) {
+    for (i = 0; i < (uint)num_forbidden_slots; i++) {
         fs_pynq[i] = (*param->fbdn_slot)[i];
-        cout << "forbidden " << num_forbidden_slots << " " << fs_pynq[i].x
-             << " " << fs_pynq[i].y << " " << fs_pynq[i].h << " "
-             << fs_pynq[i].w << endl;
+        //        cout <<"PYNQ_OPT: forbidden " << (uint)num_forbidden_slots <<
+        //        " " <<
+        //               fs_pynq[i].x << " " << fs_pynq[i].y << " " <<
+        //               fs_pynq[i].h << " " << fs_pynq[i].w <<endl;
     }
-    // cout << "finished copying" << endl;
 
-    status = solve_milp_pynq(to_sim);
-
+    cout << "PYNQ_OPT: starting PYNQ optimizer" << endl;
+    status = solve_milp(*task_set, *platform, slacks, false, to_sim);
     return 0;
 }
+
 } // namespace seu

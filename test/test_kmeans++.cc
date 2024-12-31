@@ -9,10 +9,10 @@
 int main() {
     auto TM = std::make_shared<seu::TaskManager>();
     // TM->init_from_random(20);
+    // 随机生成
     TM->init_from_json("test.json");
-    std::cout << "init from json successfully" << std::endl;
     auto random_task_set = TM->getJsonTask();
-    seu::TaskManager::TaskInfoPrint(random_task_set);
+    // seu::TaskManager::TaskInfoPrint(random_task_set);
     std::vector<seu::TaskRef> centroids;
     std::unordered_map<int, int> assignments;
     double tolerance = 0.1;
@@ -44,6 +44,27 @@ int main() {
     }
     auto cluster_info = seu::kmeanspp::getClusterMaxResourcesNumber(
         clusterToTask, random_task_set);
+
+    std::ofstream file("output.csv");
+
+    // 检查文件是否成功打开
+    if (!file.is_open()) {
+        std::cerr << "Failed to open file for writing." << std::endl;
+        return 1;
+    }
+
+    // 遍历cluster_info并写入文件
+    for (const auto &pair : cluster_info) {
+        int k = pair.first;
+        const auto &v = pair.second;
+        file << std::get<0>(v) << "," << std::get<1>(v) << "," << std::get<2>(v)
+             << "," << k << std::endl;
+    }
+
+    // 关闭文件
+    file.close();
+
+    std::cout << "Data has been written to output.csv" << std::endl;
 
     return 0;
 }

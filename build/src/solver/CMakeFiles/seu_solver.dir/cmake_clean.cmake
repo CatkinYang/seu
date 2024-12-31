@@ -1,4 +1,6 @@
 file(REMOVE_RECURSE
+  "CMakeFiles/seu_solver.dir/floorplan.cc.o"
+  "CMakeFiles/seu_solver.dir/floorplan.cc.o.d"
   "CMakeFiles/seu_solver.dir/kmeanspp.cc.o"
   "CMakeFiles/seu_solver.dir/kmeanspp.cc.o.d"
 )

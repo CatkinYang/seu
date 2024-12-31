@@ -6,18 +6,22 @@
 #include <vector>
 
 using namespace std;
-string slot_names[] = {"slot_0", "slot_1", "slot_2",
-                       "slot_3", "slot_4", "slot_5"};
 
 #define generate_xdc_file(fpga_type, from_fp_solver, to_solver, num_slots,     \
                           cell_name, fplan_xdc_file)                           \
     {                                                                          \
         int a;                                                                 \
-        vector<slice> slices_in_slot = vector<slice>(MAX_SLOTS);               \
+        vector<slice> slices_in_slot = vector<slice>(num_slots);               \
         ofstream write_xdc;                                                    \
         sort_output(fpga_type, from_fp_solver, to_solver, slices_in_slot,      \
-                    num_slots) cout                                            \
-            << "GENERATE_XDC: Started xdc generation " << endl;                \
+                    num_slots);                                                \
+        cout << "GENERATE_XDC: Started xdc generation " << endl;               \
+                                                                               \
+        vector<string> slot_names(num_slots);                                  \
+        for (a = 0; a < num_slots; a++) {                                      \
+            slot_names[a] = "slot_" + to_string(a);                            \
+        }                                                                      \
+                                                                               \
         for (a = 0; a < num_slots; a++) {                                      \
             /*    cout << "x1 " << slices_in_slot[a][0].slice_x1  <<" y1 " <<  \
              * slices_in_slot[a][0].slice_y1*/                                 \

@@ -140,6 +140,30 @@ seu_solver/fast:
 	cd /Users/catkin/workspace/seu/build && $(MAKE) $(MAKESILENT) -f src/solver/CMakeFiles/seu_solver.dir/build.make src/solver/CMakeFiles/seu_solver.dir/build
 .PHONY : seu_solver/fast
 
+floorplan.o: floorplan.cc.o
+.PHONY : floorplan.o
+
+# target to build an object file
+floorplan.cc.o:
+	cd /Users/catkin/workspace/seu/build && $(MAKE) $(MAKESILENT) -f src/solver/CMakeFiles/seu_solver.dir/build.make src/solver/CMakeFiles/seu_solver.dir/floorplan.cc.o
+.PHONY : floorplan.cc.o
+
+floorplan.i: floorplan.cc.i
+.PHONY : floorplan.i
+
+# target to preprocess a source file
+floorplan.cc.i:
+	cd /Users/catkin/workspace/seu/build && $(MAKE) $(MAKESILENT) -f src/solver/CMakeFiles/seu_solver.dir/build.make src/solver/CMakeFiles/seu_solver.dir/floorplan.cc.i
+.PHONY : floorplan.cc.i
+
+floorplan.s: floorplan.cc.s
+.PHONY : floorplan.s
+
+# target to generate assembly for a file
+floorplan.cc.s:
+	cd /Users/catkin/workspace/seu/build && $(MAKE) $(MAKESILENT) -f src/solver/CMakeFiles/seu_solver.dir/build.make src/solver/CMakeFiles/seu_solver.dir/floorplan.cc.s
+.PHONY : floorplan.cc.s
+
 kmeanspp.o: kmeanspp.cc.o
 .PHONY : kmeanspp.o
 
@@ -174,6 +198,9 @@ help:
 	@echo "... rebuild_cache"
 	@echo "... test"
 	@echo "... seu_solver"
+	@echo "... floorplan.o"
+	@echo "... floorplan.i"
+	@echo "... floorplan.s"
 	@echo "... kmeanspp.o"
 	@echo "... kmeanspp.i"
 	@echo "... kmeanspp.s"

@@ -83,7 +83,22 @@ src/solver/CMakeFiles/seu_solver.dir/kmeanspp.cc.s: cmake_force
 	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green "Compiling CXX source to assembly CMakeFiles/seu_solver.dir/kmeanspp.cc.s"
 	cd /Users/catkin/workspace/seu/build/src/solver && /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -S /Users/catkin/workspace/seu/src/solver/kmeanspp.cc -o CMakeFiles/seu_solver.dir/kmeanspp.cc.s
 
+src/solver/CMakeFiles/seu_solver.dir/floorplan.cc.o: src/solver/CMakeFiles/seu_solver.dir/flags.make
+src/solver/CMakeFiles/seu_solver.dir/floorplan.cc.o: /Users/catkin/workspace/seu/src/solver/floorplan.cc
+src/solver/CMakeFiles/seu_solver.dir/floorplan.cc.o: src/solver/CMakeFiles/seu_solver.dir/compiler_depend.ts
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/Users/catkin/workspace/seu/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_2) "Building CXX object src/solver/CMakeFiles/seu_solver.dir/floorplan.cc.o"
+	cd /Users/catkin/workspace/seu/build/src/solver && /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -MD -MT src/solver/CMakeFiles/seu_solver.dir/floorplan.cc.o -MF CMakeFiles/seu_solver.dir/floorplan.cc.o.d -o CMakeFiles/seu_solver.dir/floorplan.cc.o -c /Users/catkin/workspace/seu/src/solver/floorplan.cc
+
+src/solver/CMakeFiles/seu_solver.dir/floorplan.cc.i: cmake_force
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green "Preprocessing CXX source to CMakeFiles/seu_solver.dir/floorplan.cc.i"
+	cd /Users/catkin/workspace/seu/build/src/solver && /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -E /Users/catkin/workspace/seu/src/solver/floorplan.cc > CMakeFiles/seu_solver.dir/floorplan.cc.i
+
+src/solver/CMakeFiles/seu_solver.dir/floorplan.cc.s: cmake_force
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green "Compiling CXX source to assembly CMakeFiles/seu_solver.dir/floorplan.cc.s"
+	cd /Users/catkin/workspace/seu/build/src/solver && /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -S /Users/catkin/workspace/seu/src/solver/floorplan.cc -o CMakeFiles/seu_solver.dir/floorplan.cc.s
+
 seu_solver: src/solver/CMakeFiles/seu_solver.dir/kmeanspp.cc.o
+seu_solver: src/solver/CMakeFiles/seu_solver.dir/floorplan.cc.o
 seu_solver: src/solver/CMakeFiles/seu_solver.dir/build.make
 .PHONY : seu_solver
 

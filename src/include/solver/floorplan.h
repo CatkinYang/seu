@@ -1,4 +1,5 @@
 #pragma once
+#include "fine_grained.h"
 #include "marco.h"
 #include "milp_solver_interface.h"
 #include "pynq/pynq.h"
@@ -17,21 +18,32 @@ struct slot {
 };
 using slotRef = std::shared_ptr<slot>;
 
+// struct input_to_floorplan {
+//     int num_rm_partitions;
+//     string path_to_input;
+//     string path_to_output;
+// };
+
 struct input_to_floorplan {
-    int num_rm_partitions;
-    string path_to_input;
-    string path_to_output;
+    int num_rm_modules;
+    // string path_to_input;
+    // string path_to_output;
 };
+
 using itfRef = std::shared_ptr<input_to_floorplan>;
 
 class floorplan {
   public:
-    explicit floorplan(itfRef itf);
+    // explicit floorplan(itfRef itf);
+
+    explicit floorplan();
     ~floorplan();
 
     pynqRef pynq_inst;
 
-    int num_rm_partitions = 0;
+    // int num_rm_partitions = 0;
+
+    int num_rm_modules = 0;
 
     fpga_type type;
     int connections = 0;
@@ -65,9 +77,6 @@ class floorplan {
     vector<hw_task_allocation> alloc = vector<hw_task_allocation>(MAX_SLOTS);
 
     position_vec forbidden_region = position_vec(MAX_SLOTS);
-    // position_vec forbidden_region_pynq = position_vec(MAX_SLOTS);
-    // position_vec forbidden_region_virtex = position_vec(MAX_SLOTS);
-    // position_vec forbidden_region_virtex_5 = position_vec(MAX_SLOTS);
     std::vector<int> get_units_per_task(int n, int n_units, int n_min,
                                         int n_max);
     itfRef floorplan_input;
@@ -76,19 +85,20 @@ class floorplan {
         0, 0, &eng_x, &eng_y, &eng_w, &eng_h, &clb_from_solver,
         &bram_from_solver, &dsp_from_solver, &alloc);
 
+    // Partitioning variables
+    Taskset *task_set;
+    Platform *platform;
+    vector<double> slacks = vector<double>(MAX_SLOTS);
+    vector<double> HW_WCET = vector<double>(MAX_SLOTS);
+
     void clear_vectors();
     void resize_vectors(int n);
     void prep_input();
-    void write_output(pfsRef from_solver);
     void start_optimizer();
-    void generate_cell_name(int num_part, vector<string> *cell);
+
+    void generate_cell_name(unsigned long num_part);
     void generate_xdc(string fplan_file_name);
 
-    //    void init_fpga(enum fpga_type);
-    //    void init_gui();
-    //    void plot_rects(param_from_solver *);
-    //    bool is_compatible(std::vector<slot> ptr, unsigned long slot_num, int
-    //    max, unsigned long min, int type);
     vector<double> generate_slacks(Taskset &t, Platform &platform,
                                    double alpha);
 

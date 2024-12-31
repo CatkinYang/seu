@@ -31,7 +31,7 @@ CMAKE_COLOR_MAKEFILE:BOOL=ON
 CMAKE_CXX_COMPILER:FILEPATH=/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/c++
 
 //Flags used by the CXX compiler during all build types.
-CMAKE_CXX_FLAGS:STRING=-fsanitize=address -g
+CMAKE_CXX_FLAGS:STRING=
 
 //Flags used by the CXX compiler during DEBUG builds.
 CMAKE_CXX_FLAGS_DEBUG:STRING=-g
@@ -233,6 +233,9 @@ SEU_SOURCE_DIR:STATIC=/Users/catkin/workspace/seu
 
 //The directory containing a CMake configuration file for jsoncpp.
 jsoncpp_DIR:PATH=/opt/homebrew/lib/cmake/jsoncpp
+
+//The directory containing a CMake configuration file for yaml-cpp.
+yaml-cpp_DIR:PATH=/opt/homebrew/lib/cmake/yaml-cpp
 
 
 ########################

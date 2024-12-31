@@ -40,8 +40,10 @@ set(CMAKE_MAKEFILE_DEPENDS
   "/opt/homebrew/Cellar/cmake/3.30.5/share/cmake/Modules/Platform/Darwin-Initialize.cmake"
   "/opt/homebrew/Cellar/cmake/3.30.5/share/cmake/Modules/Platform/Darwin.cmake"
   "/opt/homebrew/Cellar/cmake/3.30.5/share/cmake/Modules/Platform/UnixPaths.cmake"
-  "/opt/homebrew/lib/cmake/jsoncpp/jsoncpp-namespaced-targets.cmake"
-  "/opt/homebrew/lib/cmake/jsoncpp/jsoncppConfig.cmake"
+  "/opt/homebrew/lib/cmake/yaml-cpp/yaml-cpp-config-version.cmake"
+  "/opt/homebrew/lib/cmake/yaml-cpp/yaml-cpp-config.cmake"
+  "/opt/homebrew/lib/cmake/yaml-cpp/yaml-cpp-targets-release.cmake"
+  "/opt/homebrew/lib/cmake/yaml-cpp/yaml-cpp-targets.cmake"
   )
 
 # The corresponding makefile is:

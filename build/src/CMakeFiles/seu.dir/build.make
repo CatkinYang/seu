@@ -119,12 +119,14 @@ seu_OBJECTS = \
 
 # External object files for target seu
 seu_EXTERNAL_OBJECTS = \
-"/Users/catkin/workspace/seu/build/src/solver/CMakeFiles/seu_solver.dir/kmeanspp.cc.o"
+"/Users/catkin/workspace/seu/build/src/solver/CMakeFiles/seu_solver.dir/kmeanspp.cc.o" \
+"/Users/catkin/workspace/seu/build/src/solver/CMakeFiles/seu_solver.dir/floorplan.cc.o"
 
 lib/libseu.a: src/CMakeFiles/seu.dir/task.cc.o
 lib/libseu.a: src/CMakeFiles/seu.dir/task_manager.cc.o
 lib/libseu.a: src/CMakeFiles/seu.dir/utils.cc.o
 lib/libseu.a: src/solver/CMakeFiles/seu_solver.dir/kmeanspp.cc.o
+lib/libseu.a: src/solver/CMakeFiles/seu_solver.dir/floorplan.cc.o
 lib/libseu.a: src/CMakeFiles/seu.dir/build.make
 lib/libseu.a: src/CMakeFiles/seu.dir/link.txt
 	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --bold --progress-dir=/Users/catkin/workspace/seu/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_4) "Linking CXX static library ../lib/libseu.a"

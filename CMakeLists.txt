@@ -48,7 +48,14 @@ endif()
 message("Build mode: ${CMAKE_BUILD_TYPE}")
 message("${SEU_SANITIZER} sanitizer will be enabled in debug mode.")
 
-# Compiler flags.
+# Compiler flags. set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -Wall
+# -Wextra -Werror") set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG}
+# -Wno-unused-parameter -Wno-attributes")
+
+# set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -O0 -ggdb
+# -fsanitize=${SEU_SANITIZER} -fno-omit-frame-pointer
+# -fno-optimize-sibling-calls" )
+
 set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -Wall -Wextra -Werror")
 set(CMAKE_CXX_FLAGS_DEBUG
     "${CMAKE_CXX_FLAGS_DEBUG}  -Wno-unused-parameter -Wno-attributes")
@@ -75,6 +82,7 @@ set(SEU_TEST_INCLUDE_DIR ${PROJECT_SOURCE_DIR}/test/include)
 set(SEU_THIRD_PARTY_INCLUDE_DIR ${PROJECT_SOURCE_DIR}/third_party)
 
 include_directories("/opt/homebrew/include/eigen3")
+
 include_directories(${SEU_SRC_INCLUDE_DIR} ${SEU_TEST_INCLUDE_DIR}
                     ${SEU_THIRD_PARTY_INCLUDE_DIR})
 include_directories(BEFORE src) # This is needed for gtest.
@@ -84,10 +92,11 @@ function(disable_target_warnings NAME)
 endfunction()
 
 set(CMAKE_MODULE_PATH "${SEU_BUILD_SUPPORT_DIR}/cmake;${CMAKE_MODULE_PATH}")
-find_package(jsoncpp)
+find_package(yaml-cpp REQUIRED)
 find_package(GUROBI)
 
 include_directories(${GUROBI_INCLUDE_DIRS})
+include_directories(${YAML_CPP_INCLUDE_DIR})
 
 add_subdirectory(third_party)
 add_subdirectory(src)

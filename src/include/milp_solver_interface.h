@@ -17,13 +17,13 @@ struct hw_task_allocation {
 
 struct param_to_solver {
   public:
-    param_to_solver(int num_rm_partitions, int num_forbidden_slots,
-                    int num_rows, int width, int num_connected_slots,
-                    int num_clk_regs, int clb_per_tile, int bram_per_tile,
-                    int dsp_per_tile, Vec *clb, Vec *bram, Vec *dsp,
-                    Vec2d *conn_vector, Vecpos *fbdn_slot, Taskset *task_set,
-                    Platform *platform, vector<double> *slacks)
-        : num_rm_partitions(num_rm_partitions),
+    param_to_solver(int num_rm_modules, int num_forbidden_slots, int num_rows,
+                    int width, int num_connected_slots, int num_clk_regs,
+                    int clb_per_tile, int bram_per_tile, int dsp_per_tile,
+                    Vec *clb, Vec *bram, Vec *dsp, Vec2d *conn_vector,
+                    Vecpos *fbdn_slot, Taskset *task_set, Platform *platform,
+                    vector<double> *slacks)
+        : num_rm_modules(num_rm_modules),
           num_forbidden_slots(num_forbidden_slots), num_rows(num_rows),
           width(width), num_connected_slots(num_connected_slots),
           num_clk_regs(num_clk_regs), clb_per_tile(clb_per_tile),
@@ -33,7 +33,7 @@ struct param_to_solver {
     param_to_solver() = default;
 
   public:
-    int num_rm_partitions;
+    int num_rm_modules;
     int num_forbidden_slots;
     int num_rows;
     int width;
@@ -95,6 +95,8 @@ class milp_solver_pynq : public milp_solver_interface {
   public:
     virtual int start_optimizer(pfsRef pfs, ptsRef pts) override;
     int solve_milp_pynq(pfsRef to_sim);
+    int solve_milp(Taskset &t, Platform &platform, vector<double> &slacks,
+                   bool preemptive_FRI, pfsRef to_sim);
 };
 
 // class milp_solver_zynq : public milp_solver_interface {

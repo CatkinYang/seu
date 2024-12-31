@@ -155,8 +155,8 @@ auto kmeanspp::getClusterMaxResourcesNumber(
     std::unordered_map<int, TaskRef> task_set)
     -> std::unordered_map<int, std::tuple<int, int, int>> {
     std::unordered_map<int, std::tuple<int, int, int>> res;
-    int clb = INT_MIN, dsp = INT_MIN, bram = INT_MIN;
     for (const auto &[k, v] : clusterToTask) {
+        int clb = INT_MIN, dsp = INT_MIN, bram = INT_MIN;
         for (auto i : v) {
             clb = std::max(clb, task_set.at(i)->getClb());
             dsp = std::max(dsp, task_set.at(i)->getDsp());

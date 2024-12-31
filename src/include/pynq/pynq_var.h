@@ -36,6 +36,10 @@ static vector<int> clb_req_pynq(MAX_SLOTS);
 static vector<int> bram_req_pynq(MAX_SLOTS);
 static vector<int> dsp_req_pynq(MAX_SLOTS);
 
+Taskset *task_set;
+Platform *platform;
+vector<double> slacks = vector<double>(MAX_SLOTS);
+
 static vector<vector<int>> conn_matrix_pynq =
     vector<vector<int>>(MAX_SLOTS, vector<int>(MAX_SLOTS, 0));
 

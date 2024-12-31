@@ -173,7 +173,7 @@ src/CMakeFiles/seu.dir/all: src/solver/CMakeFiles/seu_solver.dir/all
 
 # Build rule for subdir invocation for target.
 src/CMakeFiles/seu.dir/rule: cmake_check_build_system
-	$(CMAKE_COMMAND) -E cmake_progress_start /Users/catkin/workspace/seu/build/CMakeFiles 5
+	$(CMAKE_COMMAND) -E cmake_progress_start /Users/catkin/workspace/seu/build/CMakeFiles 6
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/Makefile2 src/CMakeFiles/seu.dir/all
 	$(CMAKE_COMMAND) -E cmake_progress_start /Users/catkin/workspace/seu/build/CMakeFiles 0
 .PHONY : src/CMakeFiles/seu.dir/rule
@@ -194,12 +194,12 @@ src/CMakeFiles/seu.dir/clean:
 src/solver/CMakeFiles/seu_solver.dir/all:
 	$(MAKE) $(MAKESILENT) -f src/solver/CMakeFiles/seu_solver.dir/build.make src/solver/CMakeFiles/seu_solver.dir/depend
 	$(MAKE) $(MAKESILENT) -f src/solver/CMakeFiles/seu_solver.dir/build.make src/solver/CMakeFiles/seu_solver.dir/build
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --progress-dir=/Users/catkin/workspace/seu/build/CMakeFiles --progress-num=5 "Built target seu_solver"
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --progress-dir=/Users/catkin/workspace/seu/build/CMakeFiles --progress-num=5,6 "Built target seu_solver"
 .PHONY : src/solver/CMakeFiles/seu_solver.dir/all
 
 # Build rule for subdir invocation for target.
 src/solver/CMakeFiles/seu_solver.dir/rule: cmake_check_build_system
-	$(CMAKE_COMMAND) -E cmake_progress_start /Users/catkin/workspace/seu/build/CMakeFiles 1
+	$(CMAKE_COMMAND) -E cmake_progress_start /Users/catkin/workspace/seu/build/CMakeFiles 2
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/Makefile2 src/solver/CMakeFiles/seu_solver.dir/all
 	$(CMAKE_COMMAND) -E cmake_progress_start /Users/catkin/workspace/seu/build/CMakeFiles 0
 .PHONY : src/solver/CMakeFiles/seu_solver.dir/rule
@@ -225,7 +225,7 @@ test/CMakeFiles/build-tests.dir/all: test/CMakeFiles/test_kmeans++.dir/all
 
 # Build rule for subdir invocation for target.
 test/CMakeFiles/build-tests.dir/rule: cmake_check_build_system
-	$(CMAKE_COMMAND) -E cmake_progress_start /Users/catkin/workspace/seu/build/CMakeFiles 7
+	$(CMAKE_COMMAND) -E cmake_progress_start /Users/catkin/workspace/seu/build/CMakeFiles 8
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/Makefile2 test/CMakeFiles/build-tests.dir/all
 	$(CMAKE_COMMAND) -E cmake_progress_start /Users/catkin/workspace/seu/build/CMakeFiles 0
 .PHONY : test/CMakeFiles/build-tests.dir/rule
@@ -246,12 +246,12 @@ test/CMakeFiles/build-tests.dir/clean:
 test/CMakeFiles/test_kmeans++.dir/all: src/CMakeFiles/seu.dir/all
 	$(MAKE) $(MAKESILENT) -f test/CMakeFiles/test_kmeans++.dir/build.make test/CMakeFiles/test_kmeans++.dir/depend
 	$(MAKE) $(MAKESILENT) -f test/CMakeFiles/test_kmeans++.dir/build.make test/CMakeFiles/test_kmeans++.dir/build
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --progress-dir=/Users/catkin/workspace/seu/build/CMakeFiles --progress-num=6,7 "Built target test_kmeans++"
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --progress-dir=/Users/catkin/workspace/seu/build/CMakeFiles --progress-num=7,8 "Built target test_kmeans++"
 .PHONY : test/CMakeFiles/test_kmeans++.dir/all
 
 # Build rule for subdir invocation for target.
 test/CMakeFiles/test_kmeans++.dir/rule: cmake_check_build_system
-	$(CMAKE_COMMAND) -E cmake_progress_start /Users/catkin/workspace/seu/build/CMakeFiles 7
+	$(CMAKE_COMMAND) -E cmake_progress_start /Users/catkin/workspace/seu/build/CMakeFiles 8
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/Makefile2 test/CMakeFiles/test_kmeans++.dir/all
 	$(CMAKE_COMMAND) -E cmake_progress_start /Users/catkin/workspace/seu/build/CMakeFiles 0
 .PHONY : test/CMakeFiles/test_kmeans++.dir/rule
