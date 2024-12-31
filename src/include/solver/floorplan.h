@@ -11,6 +11,10 @@ enum fpga_type { TYPE_ZYNQ = 0, TYPE_VIRTEX, TYPE_VIRTEX_5, TYPE_PYNQ };
 using position_vec = vector<pos>;
 using vec_2d = vector<vector<int>>;
 
+extern const fpga_type ftype;
+extern char const *fpga_board_name[];
+extern char const *fpga_device_name[];
+
 struct slot {
     int clb;
     int bram;
