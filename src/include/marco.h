@@ -5,7 +5,11 @@
 #include <iostream>
 #include <memory>
 #include <ostream>
+#include <sstream>
+#include <string.h>
 #include <string>
+#include <sys/stat.h>
+#include <sys/types.h>
 #include <vector>
 
 using ul = unsigned long;
@@ -204,3 +208,10 @@ using GRBVar4DArray = vector<GRBVar3DArray>;
     m_clk_reg[id].dsp_num = num_dsp;                                           \
     m_clk_reg[id].bram_pos = pos_bram;                                         \
     m_clk_reg[id].dsp_pos = pos_dsp;
+
+#define MAX_RECONF_MODULES 1
+#define MAX_MODULES 100
+
+#define CLB_MARGIN 150
+#define BRAM_MARGIN 10
+#define DSP_MARGIN 10

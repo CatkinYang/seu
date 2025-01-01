@@ -4,6 +4,11 @@ set(BUILD_SHARED_LIBS OFF)
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
+if(CMAKE_CXX_COMPILER_ID STREQUAL "GNU" AND CMAKE_CXX_COMPILER_VERSION
+                                            VERSION_LESS 7.0)
+  target_link_libraries(${PROJECT_NAME} -lstdc++fs)
+endif()
+
 # ##############################################################################
 set(PROJECT_NAME "SEU")
 project(${PROJECT_NAME})
