@@ -18,6 +18,24 @@
   "output": "src/CMakeFiles/seu.dir/utils.cc.o"
 },
 {
+  "directory": "/Users/catkin/workspace/seu/build/src/pynq",
+  "command": "/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/c++  -I/Users/catkin/workspace/seu/src -I/opt/homebrew/include/eigen3 -I/Users/catkin/workspace/seu/src/include -I/Users/catkin/workspace/seu/test/include -I/Users/catkin/workspace/seu/third_party -I/Library/gurobi1102/macos_universal2/include -I/opt/homebrew/include -g -Wall -Wextra -Werror  -Wno-unused-parameter -Wno-attributes -O0 -ggdb -fsanitize=address -fno-omit-frame-pointer -fno-optimize-sibling-calls -std=gnu++17 -arch arm64 -isysroot /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX15.2.sdk -fPIC -o CMakeFiles/seu_pynq.dir/milp_model_pynq_with_partition.cc.o -c /Users/catkin/workspace/seu/src/pynq/milp_model_pynq_with_partition.cc",
+  "file": "/Users/catkin/workspace/seu/src/pynq/milp_model_pynq_with_partition.cc",
+  "output": "src/pynq/CMakeFiles/seu_pynq.dir/milp_model_pynq_with_partition.cc.o"
+},
+{
+  "directory": "/Users/catkin/workspace/seu/build/src/pynq",
+  "command": "/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/c++  -I/Users/catkin/workspace/seu/src -I/opt/homebrew/include/eigen3 -I/Users/catkin/workspace/seu/src/include -I/Users/catkin/workspace/seu/test/include -I/Users/catkin/workspace/seu/third_party -I/Library/gurobi1102/macos_universal2/include -I/opt/homebrew/include -g -Wall -Wextra -Werror  -Wno-unused-parameter -Wno-attributes -O0 -ggdb -fsanitize=address -fno-omit-frame-pointer -fno-optimize-sibling-calls -std=gnu++17 -arch arm64 -isysroot /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX15.2.sdk -fPIC -o CMakeFiles/seu_pynq.dir/pynq.cc.o -c /Users/catkin/workspace/seu/src/pynq/pynq.cc",
+  "file": "/Users/catkin/workspace/seu/src/pynq/pynq.cc",
+  "output": "src/pynq/CMakeFiles/seu_pynq.dir/pynq.cc.o"
+},
+{
+  "directory": "/Users/catkin/workspace/seu/build/src/pynq",
+  "command": "/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/c++  -I/Users/catkin/workspace/seu/src -I/opt/homebrew/include/eigen3 -I/Users/catkin/workspace/seu/src/include -I/Users/catkin/workspace/seu/test/include -I/Users/catkin/workspace/seu/third_party -I/Library/gurobi1102/macos_universal2/include -I/opt/homebrew/include -g -Wall -Wextra -Werror  -Wno-unused-parameter -Wno-attributes -O0 -ggdb -fsanitize=address -fno-omit-frame-pointer -fno-optimize-sibling-calls -std=gnu++17 -arch arm64 -isysroot /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX15.2.sdk -fPIC -o CMakeFiles/seu_pynq.dir/pynq_fine_grained.cc.o -c /Users/catkin/workspace/seu/src/pynq/pynq_fine_grained.cc",
+  "file": "/Users/catkin/workspace/seu/src/pynq/pynq_fine_grained.cc",
+  "output": "src/pynq/CMakeFiles/seu_pynq.dir/pynq_fine_grained.cc.o"
+},
+{
   "directory": "/Users/catkin/workspace/seu/build/src/solver",
   "command": "/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/c++  -I/Users/catkin/workspace/seu/src -I/opt/homebrew/include/eigen3 -I/Users/catkin/workspace/seu/src/include -I/Users/catkin/workspace/seu/test/include -I/Users/catkin/workspace/seu/third_party -I/Library/gurobi1102/macos_universal2/include -I/opt/homebrew/include -g -Wall -Wextra -Werror  -Wno-unused-parameter -Wno-attributes -O0 -ggdb -fsanitize=address -fno-omit-frame-pointer -fno-optimize-sibling-calls -std=gnu++17 -arch arm64 -isysroot /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX15.2.sdk -fPIC -o CMakeFiles/seu_solver.dir/kmeanspp.cc.o -c /Users/catkin/workspace/seu/src/solver/kmeanspp.cc",
   "file": "/Users/catkin/workspace/seu/src/solver/kmeanspp.cc",
@@ -31,7 +49,7 @@
 },
 {
   "directory": "/Users/catkin/workspace/seu/build/test",
-  "command": "/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/c++  -I/Users/catkin/workspace/seu/src -I/opt/homebrew/include/eigen3 -I/Users/catkin/workspace/seu/src/include -I/Users/catkin/workspace/seu/test/include -I/Users/catkin/workspace/seu/third_party -I/Library/gurobi1102/macos_universal2/include -I/opt/homebrew/include -g -Wall -Wextra -Werror  -Wno-unused-parameter -Wno-attributes -O0 -ggdb -fsanitize=address -fno-omit-frame-pointer -fno-optimize-sibling-calls -std=gnu++17 -arch arm64 -isysroot /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX15.2.sdk -fPIE -o CMakeFiles/test_kmeans++.dir/test_kmeans++.cc.o -c /Users/catkin/workspace/seu/test/test_kmeans++.cc",
+  "command": "/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/c++  -I/Users/catkin/workspace/seu/src -I/opt/homebrew/include/eigen3 -I/Users/catkin/workspace/seu/src/include -I/Users/catkin/workspace/seu/test/include -I/Users/catkin/workspace/seu/third_party -I/Library/gurobi1102/macos_universal2/include -isystem /opt/homebrew/include -g -Wall -Wextra -Werror  -Wno-unused-parameter -Wno-attributes -O0 -ggdb -fsanitize=address -fno-omit-frame-pointer -fno-optimize-sibling-calls -std=gnu++17 -arch arm64 -isysroot /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX15.2.sdk -fPIE -o CMakeFiles/test_kmeans++.dir/test_kmeans++.cc.o -c /Users/catkin/workspace/seu/test/test_kmeans++.cc",
   "file": "/Users/catkin/workspace/seu/test/test_kmeans++.cc",
   "output": "test/CMakeFiles/test_kmeans++.dir/test_kmeans++.cc.o"
 }

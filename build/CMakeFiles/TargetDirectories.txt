@@ -8,6 +8,7 @@
 /Users/catkin/workspace/seu/build/src/CMakeFiles/test.dir
 /Users/catkin/workspace/seu/build/src/CMakeFiles/edit_cache.dir
 /Users/catkin/workspace/seu/build/src/CMakeFiles/rebuild_cache.dir
+/Users/catkin/workspace/seu/build/src/pynq/CMakeFiles/seu_pynq.dir
 /Users/catkin/workspace/seu/build/src/pynq/CMakeFiles/test.dir
 /Users/catkin/workspace/seu/build/src/pynq/CMakeFiles/edit_cache.dir
 /Users/catkin/workspace/seu/build/src/pynq/CMakeFiles/rebuild_cache.dir

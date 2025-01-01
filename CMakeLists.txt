@@ -93,6 +93,7 @@ endfunction()
 
 set(CMAKE_MODULE_PATH "${SEU_BUILD_SUPPORT_DIR}/cmake;${CMAKE_MODULE_PATH}")
 find_package(yaml-cpp REQUIRED)
+find_package(jsoncpp REQUIRED)
 find_package(GUROBI)
 
 include_directories(${GUROBI_INCLUDE_DIRS})

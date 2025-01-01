@@ -104,7 +104,7 @@ src/clean: src/solver/clean
 # Directory level rules for directory src/pynq
 
 # Recursive "all" directory target.
-src/pynq/all:
+src/pynq/all: src/pynq/CMakeFiles/seu_pynq.dir/all
 .PHONY : src/pynq/all
 
 # Recursive "preinstall" directory target.
@@ -112,7 +112,7 @@ src/pynq/preinstall:
 .PHONY : src/pynq/preinstall
 
 # Recursive "clean" directory target.
-src/pynq/clean:
+src/pynq/clean: src/pynq/CMakeFiles/seu_pynq.dir/clean
 .PHONY : src/pynq/clean
 
 #=============================================================================
@@ -165,6 +165,7 @@ third_party/clean:
 # Target rules for target src/CMakeFiles/seu.dir
 
 # All Build rule for target.
+src/CMakeFiles/seu.dir/all: src/pynq/CMakeFiles/seu_pynq.dir/all
 src/CMakeFiles/seu.dir/all: src/solver/CMakeFiles/seu_solver.dir/all
 	$(MAKE) $(MAKESILENT) -f src/CMakeFiles/seu.dir/build.make src/CMakeFiles/seu.dir/depend
 	$(MAKE) $(MAKESILENT) -f src/CMakeFiles/seu.dir/build.make src/CMakeFiles/seu.dir/build
@@ -173,7 +174,7 @@ src/CMakeFiles/seu.dir/all: src/solver/CMakeFiles/seu_solver.dir/all
 
 # Build rule for subdir invocation for target.
 src/CMakeFiles/seu.dir/rule: cmake_check_build_system
-	$(CMAKE_COMMAND) -E cmake_progress_start /Users/catkin/workspace/seu/build/CMakeFiles 6
+	$(CMAKE_COMMAND) -E cmake_progress_start /Users/catkin/workspace/seu/build/CMakeFiles 9
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/Makefile2 src/CMakeFiles/seu.dir/all
 	$(CMAKE_COMMAND) -E cmake_progress_start /Users/catkin/workspace/seu/build/CMakeFiles 0
 .PHONY : src/CMakeFiles/seu.dir/rule
@@ -188,13 +189,39 @@ src/CMakeFiles/seu.dir/clean:
 .PHONY : src/CMakeFiles/seu.dir/clean
 
 #=============================================================================
+# Target rules for target src/pynq/CMakeFiles/seu_pynq.dir
+
+# All Build rule for target.
+src/pynq/CMakeFiles/seu_pynq.dir/all:
+	$(MAKE) $(MAKESILENT) -f src/pynq/CMakeFiles/seu_pynq.dir/build.make src/pynq/CMakeFiles/seu_pynq.dir/depend
+	$(MAKE) $(MAKESILENT) -f src/pynq/CMakeFiles/seu_pynq.dir/build.make src/pynq/CMakeFiles/seu_pynq.dir/build
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --progress-dir=/Users/catkin/workspace/seu/build/CMakeFiles --progress-num=5,6,7 "Built target seu_pynq"
+.PHONY : src/pynq/CMakeFiles/seu_pynq.dir/all
+
+# Build rule for subdir invocation for target.
+src/pynq/CMakeFiles/seu_pynq.dir/rule: cmake_check_build_system
+	$(CMAKE_COMMAND) -E cmake_progress_start /Users/catkin/workspace/seu/build/CMakeFiles 3
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/Makefile2 src/pynq/CMakeFiles/seu_pynq.dir/all
+	$(CMAKE_COMMAND) -E cmake_progress_start /Users/catkin/workspace/seu/build/CMakeFiles 0
+.PHONY : src/pynq/CMakeFiles/seu_pynq.dir/rule
+
+# Convenience name for target.
+seu_pynq: src/pynq/CMakeFiles/seu_pynq.dir/rule
+.PHONY : seu_pynq
+
+# clean rule for target.
+src/pynq/CMakeFiles/seu_pynq.dir/clean:
+	$(MAKE) $(MAKESILENT) -f src/pynq/CMakeFiles/seu_pynq.dir/build.make src/pynq/CMakeFiles/seu_pynq.dir/clean
+.PHONY : src/pynq/CMakeFiles/seu_pynq.dir/clean
+
+#=============================================================================
 # Target rules for target src/solver/CMakeFiles/seu_solver.dir
 
 # All Build rule for target.
 src/solver/CMakeFiles/seu_solver.dir/all:
 	$(MAKE) $(MAKESILENT) -f src/solver/CMakeFiles/seu_solver.dir/build.make src/solver/CMakeFiles/seu_solver.dir/depend
 	$(MAKE) $(MAKESILENT) -f src/solver/CMakeFiles/seu_solver.dir/build.make src/solver/CMakeFiles/seu_solver.dir/build
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --progress-dir=/Users/catkin/workspace/seu/build/CMakeFiles --progress-num=5,6 "Built target seu_solver"
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --progress-dir=/Users/catkin/workspace/seu/build/CMakeFiles --progress-num=8,9 "Built target seu_solver"
 .PHONY : src/solver/CMakeFiles/seu_solver.dir/all
 
 # Build rule for subdir invocation for target.
@@ -225,7 +252,7 @@ test/CMakeFiles/build-tests.dir/all: test/CMakeFiles/test_kmeans++.dir/all
 
 # Build rule for subdir invocation for target.
 test/CMakeFiles/build-tests.dir/rule: cmake_check_build_system
-	$(CMAKE_COMMAND) -E cmake_progress_start /Users/catkin/workspace/seu/build/CMakeFiles 8
+	$(CMAKE_COMMAND) -E cmake_progress_start /Users/catkin/workspace/seu/build/CMakeFiles 11
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/Makefile2 test/CMakeFiles/build-tests.dir/all
 	$(CMAKE_COMMAND) -E cmake_progress_start /Users/catkin/workspace/seu/build/CMakeFiles 0
 .PHONY : test/CMakeFiles/build-tests.dir/rule
@@ -246,12 +273,12 @@ test/CMakeFiles/build-tests.dir/clean:
 test/CMakeFiles/test_kmeans++.dir/all: src/CMakeFiles/seu.dir/all
 	$(MAKE) $(MAKESILENT) -f test/CMakeFiles/test_kmeans++.dir/build.make test/CMakeFiles/test_kmeans++.dir/depend
 	$(MAKE) $(MAKESILENT) -f test/CMakeFiles/test_kmeans++.dir/build.make test/CMakeFiles/test_kmeans++.dir/build
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --progress-dir=/Users/catkin/workspace/seu/build/CMakeFiles --progress-num=7,8 "Built target test_kmeans++"
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --progress-dir=/Users/catkin/workspace/seu/build/CMakeFiles --progress-num=10,11 "Built target test_kmeans++"
 .PHONY : test/CMakeFiles/test_kmeans++.dir/all
 
 # Build rule for subdir invocation for target.
 test/CMakeFiles/test_kmeans++.dir/rule: cmake_check_build_system
-	$(CMAKE_COMMAND) -E cmake_progress_start /Users/catkin/workspace/seu/build/CMakeFiles 8
+	$(CMAKE_COMMAND) -E cmake_progress_start /Users/catkin/workspace/seu/build/CMakeFiles 11
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/Makefile2 test/CMakeFiles/test_kmeans++.dir/all
 	$(CMAKE_COMMAND) -E cmake_progress_start /Users/catkin/workspace/seu/build/CMakeFiles 0
 .PHONY : test/CMakeFiles/test_kmeans++.dir/rule

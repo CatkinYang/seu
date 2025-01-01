@@ -119,12 +119,18 @@ seu_OBJECTS = \
 
 # External object files for target seu
 seu_EXTERNAL_OBJECTS = \
+"/Users/catkin/workspace/seu/build/src/pynq/CMakeFiles/seu_pynq.dir/milp_model_pynq_with_partition.cc.o" \
+"/Users/catkin/workspace/seu/build/src/pynq/CMakeFiles/seu_pynq.dir/pynq.cc.o" \
+"/Users/catkin/workspace/seu/build/src/pynq/CMakeFiles/seu_pynq.dir/pynq_fine_grained.cc.o" \
 "/Users/catkin/workspace/seu/build/src/solver/CMakeFiles/seu_solver.dir/kmeanspp.cc.o" \
 "/Users/catkin/workspace/seu/build/src/solver/CMakeFiles/seu_solver.dir/floorplan.cc.o"
 
 lib/libseu.a: src/CMakeFiles/seu.dir/task.cc.o
 lib/libseu.a: src/CMakeFiles/seu.dir/task_manager.cc.o
 lib/libseu.a: src/CMakeFiles/seu.dir/utils.cc.o
+lib/libseu.a: src/pynq/CMakeFiles/seu_pynq.dir/milp_model_pynq_with_partition.cc.o
+lib/libseu.a: src/pynq/CMakeFiles/seu_pynq.dir/pynq.cc.o
+lib/libseu.a: src/pynq/CMakeFiles/seu_pynq.dir/pynq_fine_grained.cc.o
 lib/libseu.a: src/solver/CMakeFiles/seu_solver.dir/kmeanspp.cc.o
 lib/libseu.a: src/solver/CMakeFiles/seu_solver.dir/floorplan.cc.o
 lib/libseu.a: src/CMakeFiles/seu.dir/build.make

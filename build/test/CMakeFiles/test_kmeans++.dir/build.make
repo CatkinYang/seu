@@ -93,6 +93,7 @@ test_kmeans_______EXTERNAL_OBJECTS =
 bin/test/test_kmeans++: test/CMakeFiles/test_kmeans++.dir/test_kmeans++.cc.o
 bin/test/test_kmeans++: test/CMakeFiles/test_kmeans++.dir/build.make
 bin/test/test_kmeans++: lib/libseu.a
+bin/test/test_kmeans++: /opt/homebrew/lib/libjsoncpp.26.dylib
 bin/test/test_kmeans++: /Library/gurobi1102/macos_universal2/lib/libgurobi_c++.a
 bin/test/test_kmeans++: /usr/local/lib/libgurobi110.dylib
 bin/test/test_kmeans++: test/CMakeFiles/test_kmeans++.dir/link.txt

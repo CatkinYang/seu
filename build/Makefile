@@ -140,6 +140,19 @@ seu/fast:
 .PHONY : seu/fast
 
 #=============================================================================
+# Target rules for targets named seu_pynq
+
+# Build rule for target.
+seu_pynq: cmake_check_build_system
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/Makefile2 seu_pynq
+.PHONY : seu_pynq
+
+# fast build rule for target.
+seu_pynq/fast:
+	$(MAKE) $(MAKESILENT) -f src/pynq/CMakeFiles/seu_pynq.dir/build.make src/pynq/CMakeFiles/seu_pynq.dir/build
+.PHONY : seu_pynq/fast
+
+#=============================================================================
 # Target rules for targets named seu_solver
 
 # Build rule for target.
@@ -189,6 +202,7 @@ help:
 	@echo "... test"
 	@echo "... build-tests"
 	@echo "... seu"
+	@echo "... seu_pynq"
 	@echo "... seu_solver"
 	@echo "... test_kmeans++"
 .PHONY : help

@@ -126,6 +126,92 @@ depend:
 	cd /Users/catkin/workspace/seu/build && $(CMAKE_COMMAND) -S$(CMAKE_SOURCE_DIR) -B$(CMAKE_BINARY_DIR) --check-build-system CMakeFiles/Makefile.cmake 1
 .PHONY : depend
 
+# Convenience name for target.
+src/pynq/CMakeFiles/seu_pynq.dir/rule:
+	cd /Users/catkin/workspace/seu/build && $(MAKE) $(MAKESILENT) -f CMakeFiles/Makefile2 src/pynq/CMakeFiles/seu_pynq.dir/rule
+.PHONY : src/pynq/CMakeFiles/seu_pynq.dir/rule
+
+# Convenience name for target.
+seu_pynq: src/pynq/CMakeFiles/seu_pynq.dir/rule
+.PHONY : seu_pynq
+
+# fast build rule for target.
+seu_pynq/fast:
+	cd /Users/catkin/workspace/seu/build && $(MAKE) $(MAKESILENT) -f src/pynq/CMakeFiles/seu_pynq.dir/build.make src/pynq/CMakeFiles/seu_pynq.dir/build
+.PHONY : seu_pynq/fast
+
+milp_model_pynq_with_partition.o: milp_model_pynq_with_partition.cc.o
+.PHONY : milp_model_pynq_with_partition.o
+
+# target to build an object file
+milp_model_pynq_with_partition.cc.o:
+	cd /Users/catkin/workspace/seu/build && $(MAKE) $(MAKESILENT) -f src/pynq/CMakeFiles/seu_pynq.dir/build.make src/pynq/CMakeFiles/seu_pynq.dir/milp_model_pynq_with_partition.cc.o
+.PHONY : milp_model_pynq_with_partition.cc.o
+
+milp_model_pynq_with_partition.i: milp_model_pynq_with_partition.cc.i
+.PHONY : milp_model_pynq_with_partition.i
+
+# target to preprocess a source file
+milp_model_pynq_with_partition.cc.i:
+	cd /Users/catkin/workspace/seu/build && $(MAKE) $(MAKESILENT) -f src/pynq/CMakeFiles/seu_pynq.dir/build.make src/pynq/CMakeFiles/seu_pynq.dir/milp_model_pynq_with_partition.cc.i
+.PHONY : milp_model_pynq_with_partition.cc.i
+
+milp_model_pynq_with_partition.s: milp_model_pynq_with_partition.cc.s
+.PHONY : milp_model_pynq_with_partition.s
+
+# target to generate assembly for a file
+milp_model_pynq_with_partition.cc.s:
+	cd /Users/catkin/workspace/seu/build && $(MAKE) $(MAKESILENT) -f src/pynq/CMakeFiles/seu_pynq.dir/build.make src/pynq/CMakeFiles/seu_pynq.dir/milp_model_pynq_with_partition.cc.s
+.PHONY : milp_model_pynq_with_partition.cc.s
+
+pynq.o: pynq.cc.o
+.PHONY : pynq.o
+
+# target to build an object file
+pynq.cc.o:
+	cd /Users/catkin/workspace/seu/build && $(MAKE) $(MAKESILENT) -f src/pynq/CMakeFiles/seu_pynq.dir/build.make src/pynq/CMakeFiles/seu_pynq.dir/pynq.cc.o
+.PHONY : pynq.cc.o
+
+pynq.i: pynq.cc.i
+.PHONY : pynq.i
+
+# target to preprocess a source file
+pynq.cc.i:
+	cd /Users/catkin/workspace/seu/build && $(MAKE) $(MAKESILENT) -f src/pynq/CMakeFiles/seu_pynq.dir/build.make src/pynq/CMakeFiles/seu_pynq.dir/pynq.cc.i
+.PHONY : pynq.cc.i
+
+pynq.s: pynq.cc.s
+.PHONY : pynq.s
+
+# target to generate assembly for a file
+pynq.cc.s:
+	cd /Users/catkin/workspace/seu/build && $(MAKE) $(MAKESILENT) -f src/pynq/CMakeFiles/seu_pynq.dir/build.make src/pynq/CMakeFiles/seu_pynq.dir/pynq.cc.s
+.PHONY : pynq.cc.s
+
+pynq_fine_grained.o: pynq_fine_grained.cc.o
+.PHONY : pynq_fine_grained.o
+
+# target to build an object file
+pynq_fine_grained.cc.o:
+	cd /Users/catkin/workspace/seu/build && $(MAKE) $(MAKESILENT) -f src/pynq/CMakeFiles/seu_pynq.dir/build.make src/pynq/CMakeFiles/seu_pynq.dir/pynq_fine_grained.cc.o
+.PHONY : pynq_fine_grained.cc.o
+
+pynq_fine_grained.i: pynq_fine_grained.cc.i
+.PHONY : pynq_fine_grained.i
+
+# target to preprocess a source file
+pynq_fine_grained.cc.i:
+	cd /Users/catkin/workspace/seu/build && $(MAKE) $(MAKESILENT) -f src/pynq/CMakeFiles/seu_pynq.dir/build.make src/pynq/CMakeFiles/seu_pynq.dir/pynq_fine_grained.cc.i
+.PHONY : pynq_fine_grained.cc.i
+
+pynq_fine_grained.s: pynq_fine_grained.cc.s
+.PHONY : pynq_fine_grained.s
+
+# target to generate assembly for a file
+pynq_fine_grained.cc.s:
+	cd /Users/catkin/workspace/seu/build && $(MAKE) $(MAKESILENT) -f src/pynq/CMakeFiles/seu_pynq.dir/build.make src/pynq/CMakeFiles/seu_pynq.dir/pynq_fine_grained.cc.s
+.PHONY : pynq_fine_grained.cc.s
+
 # Help Target
 help:
 	@echo "The following are some of the valid targets for this Makefile:"
@@ -135,6 +221,16 @@ help:
 	@echo "... edit_cache"
 	@echo "... rebuild_cache"
 	@echo "... test"
+	@echo "... seu_pynq"
+	@echo "... milp_model_pynq_with_partition.o"
+	@echo "... milp_model_pynq_with_partition.i"
+	@echo "... milp_model_pynq_with_partition.s"
+	@echo "... pynq.o"
+	@echo "... pynq.i"
+	@echo "... pynq.s"
+	@echo "... pynq_fine_grained.o"
+	@echo "... pynq_fine_grained.i"
+	@echo "... pynq_fine_grained.s"
 .PHONY : help
 
 

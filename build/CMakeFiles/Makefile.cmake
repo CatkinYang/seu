@@ -40,6 +40,8 @@ set(CMAKE_MAKEFILE_DEPENDS
   "/opt/homebrew/Cellar/cmake/3.30.5/share/cmake/Modules/Platform/Darwin-Initialize.cmake"
   "/opt/homebrew/Cellar/cmake/3.30.5/share/cmake/Modules/Platform/Darwin.cmake"
   "/opt/homebrew/Cellar/cmake/3.30.5/share/cmake/Modules/Platform/UnixPaths.cmake"
+  "/opt/homebrew/lib/cmake/jsoncpp/jsoncpp-namespaced-targets.cmake"
+  "/opt/homebrew/lib/cmake/jsoncpp/jsoncppConfig.cmake"
   "/opt/homebrew/lib/cmake/yaml-cpp/yaml-cpp-config-version.cmake"
   "/opt/homebrew/lib/cmake/yaml-cpp/yaml-cpp-config.cmake"
   "/opt/homebrew/lib/cmake/yaml-cpp/yaml-cpp-targets-release.cmake"
@@ -65,6 +67,7 @@ set(CMAKE_MAKEFILE_PRODUCTS
 # Dependency information for all targets:
 set(CMAKE_DEPEND_INFO_FILES
   "src/CMakeFiles/seu.dir/DependInfo.cmake"
+  "src/pynq/CMakeFiles/seu_pynq.dir/DependInfo.cmake"
   "src/solver/CMakeFiles/seu_solver.dir/DependInfo.cmake"
   "test/CMakeFiles/build-tests.dir/DependInfo.cmake"
   "test/CMakeFiles/test_kmeans++.dir/DependInfo.cmake"
