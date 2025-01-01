@@ -4,11 +4,6 @@ set(BUILD_SHARED_LIBS OFF)
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
-if(CMAKE_CXX_COMPILER_ID STREQUAL "GNU" AND CMAKE_CXX_COMPILER_VERSION
-                                            VERSION_LESS 7.0)
-  target_link_libraries(${PROJECT_NAME} -lstdc++fs)
-endif()
-
 # ##############################################################################
 set(PROJECT_NAME "SEU")
 project(${PROJECT_NAME})
@@ -60,7 +55,7 @@ message("${SEU_SANITIZER} sanitizer will be enabled in debug mode.")
 # set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -O0 -ggdb
 # -fsanitize=${SEU_SANITIZER} -fno-omit-frame-pointer
 # -fno-optimize-sibling-calls" )
-
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -stdlib=libc++")
 set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -Wall -Wextra -Werror")
 set(CMAKE_CXX_FLAGS_DEBUG
     "${CMAKE_CXX_FLAGS_DEBUG}  -Wno-unused-parameter -Wno-attributes")
